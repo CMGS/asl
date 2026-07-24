@@ -11,9 +11,12 @@ code style standard that `go vet` and golangci-lint cannot express, as a
   the last test func. Helper-only test files are exempt.
 - **constraintname** — type-parameter constraints must be named interface
   types, never inline `[T interface{ ... }]`.
-- **functypedup** — a func type spelled out more than once (struct fields,
-  return types) must be a named type. Signatures shorter than 40 characters
-  and `_test.go` files are skipped.
+- **functypedup** — a func type spelling the same contract more than once
+  (struct fields, func results) must be a named type. Duplicates that include
+  a func result (a factory) always count; field-only duplicates count only
+  when the field names match across structs — coincidental shape twins with
+  different meanings stay inline. Signatures shorter than 40 characters and
+  `_test.go` files are skipped.
 - **topdecl** — `const`/`var` declarations live in single blocks at the top of
   the file, never below the first func. Compile-time interface checks
   (`var _ Iface = ...`) are exempt.
