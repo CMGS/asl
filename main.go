@@ -1,0 +1,20 @@
+// Command asl enforces the cocoonstack structural layout rules go vet cannot express.
+package main
+
+import (
+	"golang.org/x/tools/go/analysis/multichecker"
+
+	"github.com/CMGS/asl/constraintname"
+	"github.com/CMGS/asl/functypedup"
+	"github.com/CMGS/asl/testorder"
+	"github.com/CMGS/asl/topdecl"
+)
+
+func main() {
+	multichecker.Main(
+		constraintname.Analyzer,
+		functypedup.Analyzer,
+		testorder.Analyzer,
+		topdecl.Analyzer,
+	)
+}
