@@ -20,10 +20,15 @@ code style standard that `go vet` and golangci-lint cannot express, as a
 - **topdecl** — `const`/`var` declarations live in single blocks at the top of
   the file, never below the first func. Compile-time interface checks
   (`var _ Iface = ...`) are exempt.
+- **methodpartition** — within one file, a receiver's unexported methods never
+  appear above one of its exported methods; the exception-free slice of the
+  exported-above-unexported rule (cocoon 2026-07-28: a whole-repo read found
+  23 orderings the human walkthrough had missed, 12 of them this shape).
 
 Deliberately not covered (prose rules with sanctioned exceptions that make
-mechanical checking a false-positive machine): exported-above-unexported
-ordering and type-block atomicity — those stay in the human walkthrough.
+mechanical checking a false-positive machine): standalone-function placement
+relative to method sets, vocabulary-type clustering, producer-method trailing,
+and type-block atomicity — those stay in the human walkthrough.
 
 ## Install
 

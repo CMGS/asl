@@ -6,6 +6,7 @@ import (
 
 	"github.com/CMGS/asl/constraintname"
 	"github.com/CMGS/asl/functypedup"
+	"github.com/CMGS/asl/methodpartition"
 	"github.com/CMGS/asl/testorder"
 	"github.com/CMGS/asl/topdecl"
 )
@@ -14,6 +15,7 @@ func main() {
 	multichecker.Main(
 		constraintname.Analyzer,
 		functypedup.Analyzer,
+		methodpartition.Analyzer,
 		testorder.Analyzer,
 		topdecl.Analyzer,
 	)
