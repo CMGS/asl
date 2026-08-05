@@ -24,10 +24,18 @@ code style standard that `go vet` and golangci-lint cannot express, as a
   appear above one of its exported methods; the exception-free slice of the
   exported-above-unexported rule (cocoon 2026-07-28: a whole-repo read found
   23 orderings the human walkthrough had missed, 12 of them this shape).
+- **funcpartition** — the standalone-function slice of the same rule: an
+  unexported standalone function never appears above an exported one in the
+  same file. Constructors/producers (returning a type declared in the file)
+  are exempt — they belong to their type's block — as are `main` and `init`
+  (cocoon 2026-08-05: a human review caught `armQuota` parked between two
+  exported functions; a whole-repo scan showed it was the only instance, and
+  the constructor exemption cleanly passes the one lookalike).
 
 Deliberately not covered (prose rules with sanctioned exceptions that make
 mechanical checking a false-positive machine): standalone-function placement
-relative to method sets, vocabulary-type clustering, producer-method trailing,
+relative to method sets (the exported/unexported ordering slice IS covered by
+funcpartition), vocabulary-type clustering, producer-method trailing,
 and type-block atomicity — those stay in the human walkthrough.
 
 ## Install

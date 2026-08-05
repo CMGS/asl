@@ -5,6 +5,7 @@ import (
 	"golang.org/x/tools/go/analysis/multichecker"
 
 	"github.com/CMGS/asl/constraintname"
+	"github.com/CMGS/asl/funcpartition"
 	"github.com/CMGS/asl/functypedup"
 	"github.com/CMGS/asl/methodpartition"
 	"github.com/CMGS/asl/testorder"
@@ -14,6 +15,7 @@ import (
 func main() {
 	multichecker.Main(
 		constraintname.Analyzer,
+		funcpartition.Analyzer,
 		functypedup.Analyzer,
 		methodpartition.Analyzer,
 		testorder.Analyzer,
