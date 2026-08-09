@@ -31,12 +31,20 @@ code style standard that `go vet` and golangci-lint cannot express, as a
   (cocoon 2026-08-05: a human review caught `armQuota` parked between two
   exported functions; a whole-repo scan showed it was the only instance, and
   the constructor exemption cleanly passes the one lookalike).
+- **methodinterleave** — a standalone func or type never sits between two
+  methods of the same receiver: utilities trail the method set. The one
+  sanctioned adjacency — a type directly above the same-receiver method that
+  names it in its signature (`SizeSpec` above `Size.Spec`) — is exempt
+  (vk-cocoon 2026-08-09: a human review caught `appendMacosVNCArg` parked
+  inside the Provider method set; a whole-repo AST sweep found 8 instances
+  across two files, zero false positives against the sanctioned shapes).
 
 Deliberately not covered (prose rules with sanctioned exceptions that make
 mechanical checking a false-positive machine): standalone-function placement
-relative to method sets (the exported/unexported ordering slice IS covered by
-funcpartition), vocabulary-type clustering, producer-method trailing,
-and type-block atomicity — those stay in the human walkthrough.
+relative to method sets beyond the same-receiver interleave slice (that slice
+IS covered by methodinterleave, the exported/unexported ordering slice by
+funcpartition), vocabulary-type clustering, and producer-method trailing —
+those stay in the human walkthrough.
 
 ## Install
 

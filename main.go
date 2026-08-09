@@ -7,6 +7,7 @@ import (
 	"github.com/CMGS/asl/constraintname"
 	"github.com/CMGS/asl/funcpartition"
 	"github.com/CMGS/asl/functypedup"
+	"github.com/CMGS/asl/methodinterleave"
 	"github.com/CMGS/asl/methodpartition"
 	"github.com/CMGS/asl/testorder"
 	"github.com/CMGS/asl/topdecl"
@@ -17,6 +18,7 @@ func main() {
 		constraintname.Analyzer,
 		funcpartition.Analyzer,
 		functypedup.Analyzer,
+		methodinterleave.Analyzer,
 		methodpartition.Analyzer,
 		testorder.Analyzer,
 		topdecl.Analyzer,
