@@ -11,6 +11,7 @@ import (
 	"github.com/CMGS/asl/methodpartition"
 	"github.com/CMGS/asl/testorder"
 	"github.com/CMGS/asl/topdecl"
+	"github.com/CMGS/asl/typeblockgap"
 )
 
 func main() {
@@ -22,5 +23,6 @@ func main() {
 		methodpartition.Analyzer,
 		testorder.Analyzer,
 		topdecl.Analyzer,
+		typeblockgap.Analyzer,
 	)
 }

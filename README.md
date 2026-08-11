@@ -39,6 +39,18 @@ code style standard that `go vet` and golangci-lint cannot express, as a
   inside the Provider method set; a whole-repo AST sweep found 8 instances
   across two files, zero false positives against the sanctioned shapes).
 
+- **typeblockgap** — the other half of type-block atomicity: nothing sits between
+  a type declaration and that type's first method either. Two occupants stay
+  exempt — a producer of the type (returning it, or building it behind the
+  interface it implements) and a result type directly above the owner method
+  naming it — and a grouped `type ( ... )` declaration is one block whose members
+  never split each other. One finding per split block, reported at the type
+  (sandbox 2026-08-12: `resolvedVolume` parked between `catalogVolume` and its
+  only method slipped past both the human walkthrough and an all-clean
+  `asl ./...`; a 16-repo corpus sweep found 18 instances, 7 of them in repos the
+  shipped analyzers call clean, and one false positive — an interface-returning
+  constructor — that set the producer exemption).
+
 Deliberately not covered (prose rules with sanctioned exceptions that make
 mechanical checking a false-positive machine): standalone-function placement
 relative to method sets beyond the same-receiver interleave slice (that slice
