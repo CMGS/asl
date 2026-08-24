@@ -4,6 +4,9 @@ package funcpartition
 import (
 	"go/ast"
 	"go/token"
+	"go/types"
+	"maps"
+	"slices"
 
 	"golang.org/x/tools/go/analysis"
 
@@ -52,15 +55,15 @@ func checkFile(pass *analysis.Pass, f *ast.File) {
 		if !ok || fd.Recv != nil || fd.Name.IsExported() || fd.Pos() >= lastExported.Pos() {
 			continue
 		}
-		if fd.Name.Name == "main" || fd.Name.Name == "init" || constructs(fd, fileTypes) {
+		if fd.Name.Name == "main" || fd.Name.Name == "init" || constructs(pass, fd, fileTypes) {
 			continue
 		}
 		pass.Reportf(fd.Pos(), "unexported function %s declared above exported function %s; move unexported helpers below the exported set", fd.Name.Name, lastExported.Name.Name)
 	}
 }
 
-// constructs reports whether fd returns a type declared in the same file — the constructor/producer shape that belongs with its type block.
-func constructs(fd *ast.FuncDecl, fileTypes map[string]bool) bool {
+// constructs reports whether fd returns a type declared in the same file, or an interface one implements — the producer shape that belongs with its type block.
+func constructs(pass *analysis.Pass, fd *ast.FuncDecl, fileTypes map[string]bool) bool {
 	if fd.Type.Results == nil {
 		return false
 	}
@@ -78,6 +81,14 @@ func constructs(fd *ast.FuncDecl, fileTypes map[string]bool) bool {
 		if id, ok := t.(*ast.Ident); ok && fileTypes[id.Name] {
 			return true
 		}
+		if iface, ok := pass.TypesInfo.TypeOf(r.Type).Underlying().(*types.Interface); ok && slices.ContainsFunc(slices.Collect(maps.Keys(fileTypes)), func(name string) bool { return implements(pass, name, iface) }) {
+			return true
+		}
 	}
 	return false
+}
+
+func implements(pass *analysis.Pass, name string, iface *types.Interface) bool {
+	obj := pass.Pkg.Scope().Lookup(name)
+	return obj != nil && (types.Implements(obj.Type(), iface) || types.Implements(types.NewPointer(obj.Type()), iface))
 }
