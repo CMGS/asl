@@ -18,14 +18,14 @@ const minLen = 40
 
 var Analyzer = &analysis.Analyzer{
 	Name: "functypedup",
-	Doc:  "flag func types spelling the same contract more than once in struct fields or results",
+	Doc:  "flag func types spelling the same contract more than once in struct fields, parameters, package vars, or results",
 	Run:  run,
 }
 
-// site records one spelled-out func type: a struct field (by name) or a func result.
+// site records one spelled-out func type: a named field, parameter, or var, or a func result.
 type site struct {
 	pos    token.Pos
-	field  string
+	name   string
 	result bool
 }
 
@@ -35,15 +35,29 @@ func run(pass *analysis.Pass) (any, error) {
 		if source.IsTest(pass, f) {
 			continue
 		}
+		for _, d := range f.Decls {
+			if gd, ok := d.(*ast.GenDecl); ok && gd.Tok == token.VAR {
+				for _, spec := range gd.Specs {
+					if vs := spec.(*ast.ValueSpec); vs.Type != nil {
+						record(pass, groups, vs.Type, site{name: vs.Names[0].Name})
+					}
+				}
+			}
+		}
 		ast.Inspect(f, func(n ast.Node) bool {
 			switch d := n.(type) {
 			case *ast.StructType:
 				for _, field := range d.Fields.List {
 					if len(field.Names) > 0 {
-						record(pass, groups, field.Type, site{field: field.Names[0].Name})
+						record(pass, groups, field.Type, site{name: field.Names[0].Name})
 					}
 				}
 			case *ast.FuncDecl:
+				for _, p := range d.Type.Params.List {
+					if len(p.Names) > 0 {
+						record(pass, groups, p.Type, site{name: p.Names[0].Name})
+					}
+				}
 				if d.Type.Results != nil {
 					for _, r := range d.Type.Results.List {
 						record(pass, groups, r.Type, site{result: true})
@@ -68,9 +82,9 @@ func report(pass *analysis.Pass, sig string, sites []site) {
 	if !slices.ContainsFunc(sites, func(s site) bool { return s.result }) {
 		names := map[string]int{}
 		for _, s := range sites {
-			names[s.field]++
+			names[s.name]++
 		}
-		eligible = slices.DeleteFunc(sites, func(s site) bool { return names[s.field] < 2 })
+		eligible = slices.DeleteFunc(sites, func(s site) bool { return names[s.name] < 2 })
 		if len(eligible) < 2 {
 			return
 		}
