@@ -19,6 +19,7 @@ Division of labor on any pass wider than one diff: opus/sonnet subagents read th
 6. **English only** — no Chinese in code, comments, strings, or docs.
 7. **Modern Go** — hand-rolling what the Go 1.25/1.26 toolchain already provides is a violation: loops replaceable by `slices`/`maps` helpers (`ContainsFunc`, `IndexFunc`, `SortFunc`, `Collect`), `min`/`max`/`clear` builtins, `for range n`, `cmp.Or`, iterators, `wg.Go`. See Go Modern Features for the catalog.
 8. **Signatures** — type-parameter constraints are named interface types, never inline `[T interface{ ... }]`; a func type spelled out more than once gets a named type; a signature that takes 3+ lines to read is a naming failure, not a formatting problem (see Signatures).
+9. **Hot path** — state the per-request/claim cost of the change (target zero, keep new work off the claim path); a claimed perf effect is real only if it survives an A/B bench with both arms interleaved in one run and the order swapped.
 
 ## Commit Rules
 
@@ -36,13 +37,13 @@ Division of labor on any pass wider than one diff: opus/sonnet subagents read th
 - If conflicts arise during rebase, resolve per-commit, not squash-and-pray
 - Never rewrite already-pushed history (rebase/amend/force-push) without explicit per-conversation authorization — rebase freely only on commits that haven't left the machine
 
-## Pre-Commit Checklist
+## Batch-End Checklist
 
-Every round of changes must complete these steps before committing:
+Runs once at the end of a branch/batch before the final push (the /review-round cadence); mid-batch commits are gated by steps 4–6 only:
 
-1. **Style Self-Check** — walk every changed file, `_test.go` included, against the checklist yourself; before committing print each file's declaration map (`grep -n '^func \|^type ' <file>`) and confirm the order — a verification aid, never a substitute for reading the file
+1. **Style Self-Check** — walk every changed file, `_test.go` included, against the checklist yourself; before committing print each file's declaration map (`grep -n '^func \|^type ' <file>`) and confirm the order — a verification aid, never a substitute for reading the file. For a fix, sweep, or cut commit also count comment lines in the staged diff: `git diff --cached -U0 -- '*.go' | grep -cE '^\+[[:space:]]*//'` must not exceed the `^-` count (the commit hook checks the same)
 2. **Senior Tech Review** — correctness, edge cases, consistency; no contrived scenarios — if retry/GC already converges, the failure is already loud, and the residue is already bounded, no mechanism is added
-3. **Run `/simplify`** — three parallel review agents (reuse, quality, efficiency) over the whole diff, `_test.go` included; fix all actionable findings. The order is fixed: personal walkthrough → `/simplify` → gates; agents check substance and never stand in for the layout rules
+3. **Run `/simplify`** — the four lenses (reuse, simplification, efficiency, altitude) over the whole diff, `_test.go` included; fix all actionable findings. The order is fixed: personal walkthrough → `/simplify` → gates; agents check substance and never stand in for the layout rules
 4. **`make lint` and `make fmt-check`** — separate targets, the lint workflow runs both; zero issues on `GOOS=darwin` and `GOOS=linux`, run with `GOWORK=off` (the workspace `go.work` resolves sibling checkouts and diverges from CI). fmt authority is the pinned golangci-lint from the Makefile, never a local `gofumpt@latest`. Multi-module repos (sandbox: 5 modules) `go mod tidy` every module after any pin change and count the `0 issues.` lines — modules × 2 GOOS; one short means lint died inside a module
 5. **`asl ./...`** on both GOOS — zero findings. Eight analyzers: `topdecl`, `testorder`, `constraintname`, `functypedup`, `methodpartition`, `funcpartition`, `methodinterleave`, `typeblockgap`. Deliberately NOT covered — standalone-func placement relative to other receivers' method sets, vocabulary-type clustering, producer-method trailing — stays in the walkthrough. Source `~/Documents/workspace/asl` (`make install`, or the rolling Linux binaries at https://github.com/CMGS/asl/releases/tag/latest); `~/.claude/hooks/asl-gate.sh` blocks `git commit` on findings and compiles through `go.work`, so the local sibling checkout must match the `go.mod` pin
 6. **`git status` before `git add -A`** — tag-gated builds use `go build -o /dev/null` or `go vet -tags X`; a binary must never reach the index

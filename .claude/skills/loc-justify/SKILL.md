@@ -15,8 +15,9 @@ Reading discipline: opus/sonnet lens agents read every file in scope in full
 via `Read` — never grep/sed sampling, which loses the context a verdict needs;
 the session model plans the batches, picks models (sonnet for mechanical
 lenses, opus for judgment-heavy ones), adjudicates every finding against the
-source itself, and does the final review. Before scanning, read the previous
-round's memory for this repo and carry its standing rejections forward (§4).
+source itself, and walks every touched file through the /code (or /code-rs,
+/code-py, /code-ts) Style Self-Check itself. Before scanning, read the repo's
+`loc-justify-rejections` memory and carry its standing rejections forward (§4).
 
 ## 1. Measure — exact commands, never estimate
 
@@ -64,7 +65,9 @@ review rounds net-positive is the finding.
 
 ## 3. Justify scan — multi-agent lenses, prod code only
 
-Mechanical scans on haiku/sonnet, one lens per agent:
+One lens per agent — sonnet for the mechanical lenses, opus for the
+over-design lens; every agent reads its files in full and returns
+`file:line — lens — finding — evidence (call sites / commands run)`:
 
 - **dead/vestigial**: exported funcs with no callers, seams nothing injects,
   flags nothing sets, error branches no caller can trigger (cross-check
@@ -122,9 +125,10 @@ outcome — never manufacture cuts to look productive, and never cut tests or
 load-bearing WHY comments to move the number.
 
 **Standing rejections.** Every round ends with an adjudicated-rejected list
-(candidate, reason) written to the repo's memory, and every round begins by
-reading the previous one: a rejected candidate is not re-flagged unless the
-code or the callers changed. Typical entries: single-consumer helpers kept for
+(candidate, reason) appended to one memory file per repo named
+`loc-justify-rejections`, and every round begins by reading it and quoting
+the rows it relied on in the report: a rejected candidate is not re-flagged
+unless the code or the callers changed. Typical entries: single-consumer helpers kept for
 sibling symmetry, guards at an exported-API boundary, deliberate scaffolding
 for a rollout phase.
 
@@ -153,4 +157,6 @@ any bug-fix commit:
 - `git status` before `git add -A`; no build artifacts in the index.
 - A cut on a hot path gets an A/B bench with both arms interleaved in one run
   and the order swapped — arms measured in separate runs lie.
-- Gates as in /code or /code-rs, both platforms, before push.
+- Gates per /review-round §6 (the single gate list), both platforms, before
+  push; a bug-fix commit from §0 is exempt from the /review-round §5 net-zero
+  budget like tests, named in the report.
