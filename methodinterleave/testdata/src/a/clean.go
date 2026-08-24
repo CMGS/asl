@@ -25,3 +25,14 @@ func lowHelper() int { return 0 }
 type vocabulary struct{ kind string }
 
 func trailing(v vocabulary) string { return v.kind }
+
+type Meter struct{}
+
+func (m *Meter) Read() {}
+
+type (
+	MeterSpec struct{}
+	MeterOpts struct{}
+)
+
+func (m *Meter) Spec(o MeterOpts) MeterSpec { return MeterSpec{} }

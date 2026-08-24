@@ -4,6 +4,7 @@ package methodinterleave
 import (
 	"go/ast"
 	"go/token"
+	"slices"
 
 	"golang.org/x/tools/go/analysis"
 
@@ -26,10 +27,10 @@ func run(pass *analysis.Pass) (any, error) {
 }
 
 type decl struct {
-	node ast.Node
-	name string
-	recv string // receiver type; "" for standalone funcs and types
-	typ  bool
+	node  ast.Node
+	name  string
+	recv  string   // receiver type; "" for standalone funcs and type blocks
+	types []string // type names declared by a type block; nil for funcs
 }
 
 func checkFile(pass *analysis.Pass, f *ast.File) {
@@ -42,10 +43,19 @@ func checkFile(pass *analysis.Pass, f *ast.File) {
 			if d.Tok != token.TYPE {
 				continue
 			}
+			var block decl
 			for _, spec := range d.Specs {
-				if ts, ok := spec.(*ast.TypeSpec); ok {
-					seq = append(seq, decl{node: ts, name: ts.Name.Name, typ: true})
+				ts, ok := spec.(*ast.TypeSpec)
+				if !ok {
+					continue
 				}
+				if block.node == nil {
+					block.node, block.name = ts, ts.Name.Name
+				}
+				block.types = append(block.types, ts.Name.Name)
+			}
+			if block.node != nil {
+				seq = append(seq, block)
 			}
 		}
 	}
@@ -58,11 +68,11 @@ func checkFile(pass *analysis.Pass, f *ast.File) {
 		if prev == "" || prev != next {
 			continue
 		}
-		if d.typ && consumedByNext(seq, i) {
+		if d.types != nil && seq[i+1].recv != "" && slices.ContainsFunc(d.types, func(t string) bool { return consumedBy(seq[i+1], t) }) {
 			continue
 		}
 		what := "standalone function"
-		if d.typ {
+		if d.types != nil {
 			what = "type"
 		}
 		pass.Reportf(d.node.Pos(), "%s %s declared between %s methods; keep the method set contiguous and move it above or below", what, d.name, prev)
@@ -78,19 +88,15 @@ func nearestReceiver(seq []decl, i, step int) string {
 	return ""
 }
 
-// consumedByNext reports the sanctioned adjacency: a method-less type directly
-// above a method that names it in its signature (`SizeSpec` above `Size.Spec`).
-func consumedByNext(seq []decl, i int) bool {
-	if i+1 >= len(seq) || seq[i+1].recv == "" {
-		return false
-	}
-	fd, ok := seq[i+1].node.(*ast.FuncDecl)
+// consumedBy reports the sanctioned adjacency: a type directly above a method naming it (SizeSpec above Size.Spec).
+func consumedBy(d decl, name string) bool {
+	fd, ok := d.node.(*ast.FuncDecl)
 	if !ok {
 		return false
 	}
 	found := false
 	ast.Inspect(fd.Type, func(n ast.Node) bool {
-		if id, ok := n.(*ast.Ident); ok && id.Name == seq[i].name {
+		if id, ok := n.(*ast.Ident); ok && id.Name == name {
 			found = true
 		}
 		return !found

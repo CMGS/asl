@@ -17,3 +17,14 @@ func (p *Provider) NewHelper() *Provider { return p }
 func apply(r *record) int { return r.pid } // want `standalone function apply declared between Provider methods; keep the method set contiguous and move it above or below`
 
 func (p *Provider) Close() {}
+
+type Queue struct{}
+
+func (q *Queue) Push() {}
+
+type (
+	kind  string // want `type kind declared between Queue methods; keep the method set contiguous and move it above or below`
+	label string
+)
+
+func (q *Queue) Pop() {}
