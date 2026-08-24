@@ -1,4 +1,4 @@
-// Package constraintname flags inline interface literals used as type-parameter constraints.
+// Package constraintname flags type-parameter constraints that are not named types.
 package constraintname
 
 import (
@@ -11,7 +11,7 @@ import (
 
 var Analyzer = &analysis.Analyzer{
 	Name: "constraintname",
-	Doc:  "flag inline interface constraints in type-parameter lists",
+	Doc:  "flag inline interface, union, and other unnamed constraints in type-parameter lists",
 	Run:  run,
 }
 
@@ -31,7 +31,7 @@ func run(pass *analysis.Pass) (any, error) {
 				return true
 			}
 			for _, field := range params.List {
-				if hasInterfaceLit(field.Type) {
+				if !isNamed(field.Type) {
 					pass.Reportf(field.Type.Pos(), "inline interface constraint; declare a named constraint type")
 				}
 			}
@@ -41,11 +41,16 @@ func run(pass *analysis.Pass) (any, error) {
 	return nil, nil
 }
 
-func hasInterfaceLit(e ast.Expr) bool {
-	for n := range ast.Preorder(e) {
-		if _, ok := n.(*ast.InterfaceType); ok {
-			return true
-		}
+func isNamed(e ast.Expr) bool {
+	switch x := e.(type) {
+	case *ast.IndexExpr:
+		e = x.X
+	case *ast.IndexListExpr:
+		e = x.X
+	}
+	switch e.(type) {
+	case *ast.Ident, *ast.SelectorExpr:
+		return true
 	}
 	return false
 }
