@@ -26,23 +26,26 @@ code style standard that `go vet` and golangci-lint cannot express, as a
   23 orderings the human walkthrough had missed, 12 of them this shape).
 - **funcpartition** — the standalone-function slice of the same rule: an
   unexported standalone function never appears above an exported one in the
-  same file. Constructors/producers (returning a type declared in the file)
-  are exempt — they belong to their type's block — as are `main` and `init`
+  same file. Constructors/producers (returning a type declared in the file,
+  or an interface it implements) are exempt — they belong to their type's
+  block — as are `main` and `init`
   (cocoon 2026-08-05: a human review caught `armQuota` parked between two
   exported functions; a whole-repo scan showed it was the only instance, and
   the constructor exemption cleanly passes the one lookalike).
 - **methodinterleave** — a standalone func or type never sits between two
   methods of the same receiver: utilities trail the method set. The one
   sanctioned adjacency — a type directly above the same-receiver method that
-  names it in its signature (`SizeSpec` above `Size.Spec`) — is exempt
+  names it in its signature (`SizeSpec` above `Size.Spec`) — is exempt, and a
+  grouped `type ( ... )` declaration is one block: reported once, exempt when
+  the method names any member
   (vk-cocoon 2026-08-09: a human review caught `appendMacosVNCArg` parked
   inside the Provider method set; a whole-repo AST sweep found 8 instances
   across two files, zero false positives against the sanctioned shapes).
 
 - **typeblockgap** — the other half of type-block atomicity: nothing sits between
   a type declaration and that type's first method either. Two occupants stay
-  exempt — a producer of the type (returning it, or building it behind the
-  interface it implements) and a result type directly above the owner method
+  exempt — a producer of the type (returning it, or an interface it
+  implements) and a result type directly above the owner method
   naming it — and a grouped `type ( ... )` declaration is one block whose members
   never split each other. One finding per split block, reported at the type
   (sandbox 2026-08-12: `resolvedVolume` parked between `catalogVolume` and its
