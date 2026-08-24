@@ -64,6 +64,14 @@ those stay in the human walkthrough.
 make install   # go install → $GOPATH/bin/asl
 ```
 
+Every push to `main` also publishes static Linux binaries (amd64 and arm64)
+under the rolling [`latest` release](https://github.com/CMGS/asl/releases/tag/latest):
+
+```sh
+curl -fsSL -o asl https://github.com/CMGS/asl/releases/download/latest/asl-linux-amd64
+chmod +x asl
+```
+
 ## Usage
 
 ```sh
@@ -72,3 +80,17 @@ GOOS=linux asl ./...      # cross-GOOS pass for platform-gated files
 go vet -vettool=$(command -v asl) ./...
 asl -testorder=false ./...   # disable an analyzer
 ```
+
+## Skills
+
+`.claude/skills/` vendors the agent skills this checker mechanizes a slice
+of, for reuse in other projects — copy a directory into your own skills
+location (project `.claude/skills/` or user-level `~/.claude/skills/`):
+
+- **code** — the full Go style standard: declaration layout, comment budget,
+  logging, modern-Go idioms, naming, error handling, build/CI config. asl
+  enforces its mechanically checkable layout rules; the rest stays in the
+  review walkthrough.
+- **loc-justify** — whole-repo production-LOC audit: measure and attribute
+  code mass with exact commands, then force an item-by-item EARNED/CHALLENGED
+  verdict with a ranked cut-list.
