@@ -28,3 +28,15 @@ type (
 )
 
 func (q *Queue) Pop() {}
+
+type Engine struct{}
+
+func (e *Engine) Configure() {}
+
+type lease struct{}
+
+func (l *lease) close() {}
+
+func (e *Engine) Launch() {} // want `method Engine.Launch resumes the Engine method set after type lease; keep the method set contiguous, only producers trail a foreign type block`
+
+func (e *Engine) NewLease() *lease { return nil }

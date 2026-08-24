@@ -36,3 +36,9 @@ type (
 )
 
 func (m *Meter) Spec(o MeterOpts) MeterSpec { return MeterSpec{} }
+
+type Tty struct{}
+
+func (t *Tty) Close() error { return nil }
+
+func (s *Size) OpenTty() *Tty { return nil }
