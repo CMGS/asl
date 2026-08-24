@@ -20,6 +20,18 @@ type Decl struct {
 	Types []string // type names declared by a type block; nil for funcs
 }
 
+// String names d the way a diagnostic does.
+func (d Decl) String() string {
+	switch {
+	case d.Types != nil:
+		return "type " + d.Name
+	case d.Recv != "":
+		return "method " + d.Recv + "." + d.Name
+	default:
+		return "standalone function " + d.Name
+	}
+}
+
 // IsFunc reports whether d is a standalone func.
 func (d Decl) IsFunc() bool {
 	return d.Recv == "" && d.Types == nil
@@ -57,6 +69,13 @@ func (d Decl) Produces(pass *analysis.Pass, t string) bool {
 		}
 		iface, ok := pass.TypesInfo.TypeOf(r.Type).Underlying().(*types.Interface)
 		return ok && obj != nil && (types.Implements(obj.Type(), iface) || types.Implements(types.NewPointer(obj.Type()), iface))
+	})
+}
+
+// ProducesAny reports whether d produces a type, other than its own receiver, declared by one of blocks.
+func (d Decl) ProducesAny(pass *analysis.Pass, blocks []Decl) bool {
+	return slices.ContainsFunc(blocks, func(b Decl) bool {
+		return slices.ContainsFunc(b.Types, func(t string) bool { return t != d.Recv && d.Produces(pass, t) })
 	})
 }
 

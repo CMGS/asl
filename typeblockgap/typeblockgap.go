@@ -36,7 +36,7 @@ func checkFile(pass *analysis.Pass, f *ast.File) {
 			if exempt(pass, seq, i, owner, m) {
 				continue
 			}
-			pass.Reportf(block.Node.Pos(), "type %s is split from its first method %s by %s; keep the type declaration and its method set contiguous", block.Name, seq[m].Name, describe(seq[i]))
+			pass.Reportf(block.Node.Pos(), "type %s is split from its first method %s by %s; keep the type declaration and its method set contiguous", block.Name, seq[m].Name, seq[i])
 			break
 		}
 	}
@@ -65,24 +65,13 @@ func blockFirstMethod(d source.Decl, first map[string]int) int {
 
 // exempt reports the sanctioned occupants: a producer of the owner, or a result type directly above the owner method consuming it.
 func exempt(pass *analysis.Pass, seq []source.Decl, i, owner, m int) bool {
-	d, o := seq[i], seq[owner]
+	d := seq[i]
 	switch {
 	case d.Types != nil:
 		return i+1 == m && slices.ContainsFunc(d.Types, seq[m].Mentions)
 	case d.Recv != "":
 		return false
 	default:
-		return slices.ContainsFunc(o.Types, func(t string) bool { return d.Produces(pass, t) })
-	}
-}
-
-func describe(d source.Decl) string {
-	switch {
-	case d.Types != nil:
-		return "type " + d.Name
-	case d.Recv != "":
-		return "method " + d.Recv + "." + d.Name
-	default:
-		return "standalone function " + d.Name
+		return d.ProducesAny(pass, seq[owner:owner+1])
 	}
 }

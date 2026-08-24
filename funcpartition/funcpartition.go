@@ -3,7 +3,6 @@ package funcpartition
 
 import (
 	"go/ast"
-	"slices"
 
 	"golang.org/x/tools/go/analysis"
 
@@ -25,10 +24,8 @@ func run(pass *analysis.Pass) (any, error) {
 
 func checkFile(pass *analysis.Pass, f *ast.File) {
 	seq := source.Decls(f)
-	var fileTypes []string
 	last := -1
 	for i, d := range seq {
-		fileTypes = append(fileTypes, d.Types...)
 		if d.IsFunc() && !d.IsTest() && ast.IsExported(d.Name) {
 			last = i
 		}
@@ -40,7 +37,7 @@ func checkFile(pass *analysis.Pass, f *ast.File) {
 		if !d.IsFunc() || d.IsTest() || ast.IsExported(d.Name) || d.Name == "main" || d.Name == "init" {
 			continue
 		}
-		if slices.ContainsFunc(fileTypes, func(t string) bool { return d.Produces(pass, t) }) {
+		if d.ProducesAny(pass, seq) {
 			continue
 		}
 		pass.Reportf(d.Node.Pos(), "unexported function %s declared above exported function %s; move unexported helpers below the exported set", d.Name, seq[last].Name)
