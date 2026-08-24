@@ -52,7 +52,7 @@ func (d Decl) Produces(pass *analysis.Pass, t string) bool {
 	}
 	obj := pass.Pkg.Scope().Lookup(t)
 	return slices.ContainsFunc(fd.Type.Results.List, func(r *ast.Field) bool {
-		if ident(r.Type) == t {
+		if Ident(r.Type) == t {
 			return true
 		}
 		iface, ok := pass.TypesInfo.TypeOf(r.Type).Underlying().(*types.Interface)
@@ -90,7 +90,11 @@ func Decls(f *ast.File) []Decl {
 	return seq
 }
 
-func ident(e ast.Expr) string {
+// Ident unwraps parenthesis, pointer, and type-parameter wrappers down to the type identifier.
+func Ident(e ast.Expr) string {
+	if paren, ok := e.(*ast.ParenExpr); ok {
+		e = paren.X
+	}
 	if star, ok := e.(*ast.StarExpr); ok {
 		e = star.X
 	}
@@ -110,5 +114,5 @@ func receiver(fd *ast.FuncDecl) string {
 	if fd.Recv == nil || len(fd.Recv.List) == 0 {
 		return ""
 	}
-	return ident(fd.Recv.List[0].Type)
+	return Ident(fd.Recv.List[0].Type)
 }

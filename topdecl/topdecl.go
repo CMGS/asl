@@ -13,7 +13,7 @@ import (
 
 var Analyzer = &analysis.Analyzer{
 	Name: "topdecl",
-	Doc:  "flag const/var declarations below the first func, split across blocks, or out of const-then-var order",
+	Doc:  "flag const/var declarations below the first func, split across blocks, or out of const-then-var order, and interface checks away from their type",
 	Run:  run,
 }
 
@@ -25,6 +25,7 @@ func run(pass *analysis.Pass) (any, error) {
 }
 
 func checkFile(pass *analysis.Pass, f *ast.File) {
+	checkPlacement(pass, f)
 	firstFunc := token.NoPos
 	if i := slices.IndexFunc(f.Decls, func(d ast.Decl) bool { _, ok := d.(*ast.FuncDecl); return ok }); i >= 0 {
 		firstFunc = f.Decls[i].Pos()
@@ -32,7 +33,7 @@ func checkFile(pass *analysis.Pass, f *ast.File) {
 	blocks := map[token.Token]int{}
 	for _, d := range f.Decls {
 		gd, ok := d.(*ast.GenDecl)
-		if !ok || gd.Tok == token.IMPORT || gd.Tok == token.TYPE || isCheckOnly(gd) {
+		if !ok || gd.Tok == token.IMPORT || gd.Tok == token.TYPE || isCheckOnly(d) {
 			continue
 		}
 		if firstFunc.IsValid() && gd.Pos() > firstFunc {
@@ -49,9 +50,53 @@ func checkFile(pass *analysis.Pass, f *ast.File) {
 	}
 }
 
+// checkPlacement requires a check of a file-local type to sit immediately above that type, other checks between allowed.
+func checkPlacement(pass *analysis.Pass, f *ast.File) {
+	typeAt := map[string]int{}
+	for i, d := range f.Decls {
+		if gd, ok := d.(*ast.GenDecl); ok && gd.Tok == token.TYPE {
+			for _, spec := range gd.Specs {
+				if ts, ok := spec.(*ast.TypeSpec); ok {
+					typeAt[ts.Name.Name] = i
+				}
+			}
+		}
+	}
+	for i, d := range f.Decls {
+		if !isCheckOnly(d) {
+			continue
+		}
+		next := i + 1
+		for next < len(f.Decls) && isCheckOnly(f.Decls[next]) {
+			next++
+		}
+		for _, spec := range d.(*ast.GenDecl).Specs {
+			for _, v := range spec.(*ast.ValueSpec).Values {
+				if at, ok := typeAt[checkedType(v)]; ok && at != next {
+					pass.Reportf(v.Pos(), "interface check for %s away from its type; place it immediately above the type", checkedType(v))
+				}
+			}
+		}
+	}
+}
+
+// checkedType names the type behind (*T)(nil), T{}, &T{}, or T(x).
+func checkedType(e ast.Expr) string {
+	switch x := e.(type) {
+	case *ast.CallExpr:
+		return source.Ident(x.Fun)
+	case *ast.CompositeLit:
+		return source.Ident(x.Type)
+	case *ast.UnaryExpr:
+		return checkedType(x.X)
+	}
+	return ""
+}
+
 // isCheckOnly exempts compile-time interface checks (var _ Iface = ...), which stand alone by rule.
-func isCheckOnly(gd *ast.GenDecl) bool {
-	if gd.Tok != token.VAR {
+func isCheckOnly(d ast.Decl) bool {
+	gd, ok := d.(*ast.GenDecl)
+	if !ok || gd.Tok != token.VAR {
 		return false
 	}
 	for _, spec := range gd.Specs {
