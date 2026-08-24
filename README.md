@@ -9,8 +9,9 @@ code style standard that `go vet` and golangci-lint cannot express, as a
 - **testorder** — in `_test.go` files, all `Test*`/`Benchmark*`/`Fuzz*`/`Example*`
   funcs come first; every helper (func, fixture type, its methods) sits below
   the last test func. Helper-only test files are exempt.
-- **constraintname** — type-parameter constraints must be named interface
-  types, never inline `[T interface{ ... }]`.
+- **constraintname** — type-parameter constraints must be named types, never
+  inline `[T interface{ ... }]` or a bare union `[T ~int | ~string]`; `any`,
+  `comparable`, and instantiated constraints (`Store[int]`) pass.
 - **functypedup** — a func type spelling the same contract more than once
   (struct fields, parameters, package vars, func results) must be a named
   type. Duplicates that include a func result (a factory) always count; the
@@ -18,17 +19,22 @@ code style standard that `go vet` and golangci-lint cannot express, as a
   twins with different meanings stay inline. Signatures shorter than 40
   characters and `_test.go` files are skipped.
 - **topdecl** — `const`/`var` declarations live in single blocks at the top of
-  the file, never below the first func. Compile-time interface checks
-  (`var _ Iface = ...`) are exempt.
+  the file, `const` before `var`, never below the first func. Compile-time
+  interface checks (`var _ Iface = ...`) are exempt from the blocks but must
+  sit immediately above the type they check when that type is declared in the
+  same file (other checks may stack between); an untyped `var _ = expr` is a
+  data var. A 19-module sweep found seven misplaced checks, two below their
+  type.
 - **methodpartition** — within one file, a receiver's unexported methods never
-  appear above one of its exported methods; the exception-free slice of the
-  exported-above-unexported rule (cocoon 2026-07-28: a whole-repo read found
+  appear above one of its exported methods; a trailing producer (an exported
+  method placed below the block of the type it produces) ends no exported
+  set. Otherwise the exception-free slice of the exported-above-unexported rule (cocoon 2026-07-28: a whole-repo read found
   23 orderings the human walkthrough had missed, 12 of them this shape).
 - **funcpartition** — the standalone-function slice of the same rule: an
   unexported standalone function never appears above an exported one in the
   same file. Constructors/producers (returning a type declared in the file,
   or an interface it implements) are exempt — they belong to their type's
-  block — as are `main` and `init`
+  block — as are `main`, `init`, and test funcs, whose ordering testorder owns
   (cocoon 2026-08-05: a human review caught `armQuota` parked between two
   exported functions; a whole-repo scan showed it was the only instance, and
   the constructor exemption cleanly passes the one lookalike).
@@ -37,13 +43,17 @@ code style standard that `go vet` and golangci-lint cannot express, as a
   sanctioned adjacency — a type directly above the same-receiver method that
   names it in its signature (`SizeSpec` above `Size.Spec`) — is exempt, and a
   grouped `type ( ... )` declaration is one block: reported once, exempt when
-  the method names any member
+  the method names any member. Another receiver's block inside the method set
+  is the producer-trailing shape (`Size.OpenPty` below `Pty`'s block) only
+  while every later method of the receiver produces a type declared after
+  the split; the first method that does not is reported
   (vk-cocoon 2026-08-09: a human review caught `appendMacosVNCArg` parked
   inside the Provider method set; a whole-repo AST sweep found 8 instances
   across two files, zero false positives against the sanctioned shapes).
 
 - **typeblockgap** — the other half of type-block atomicity: nothing sits between
-  a type declaration and that type's first method either. Two occupants stay
+  a type declaration and that type's first method, and the type is never
+  declared below its own methods. Two occupants stay
   exempt — a producer of the type (returning it, or an interface it
   implements) and a result type directly above the owner method
   naming it — and a grouped `type ( ... )` declaration is one block whose members
@@ -58,7 +68,13 @@ Deliberately not covered (prose rules with sanctioned exceptions that make
 mechanical checking a false-positive machine): standalone-function placement
 relative to method sets beyond the same-receiver interleave slice (that slice
 IS covered by methodinterleave, the exported/unexported ordering slice by
-funcpartition), vocabulary-type clustering, and producer-method trailing —
+funcpartition), functional grouping of utilities ("grouping beats
+visibility" — funcpartition reports an unexported helper above a later
+exported one even when each pair is its own group; a 2026-08 cocoon sweep
+found one instance), vocabulary-type clustering, `const`/`var` blocks placed
+after the enum type they belong to (`type VMState string` then its `const`
+block is the standard's own example; 14 instances across the corpus), and
+producer-method trailing beyond the resume slice methodinterleave covers —
 those stay in the human walkthrough.
 
 ## Install
