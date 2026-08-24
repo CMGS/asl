@@ -1,16 +1,18 @@
 ---
 name: code
-description: Cocoon code style standards for Go projects — declaration layout (single top-of-file const/var block), test-file layout (tests before helpers), signature naming (named constraints and func types), hard comment budget, mandatory modern Go (1.25/1.26 idioms), import grouping, logging (core/log), context handling, error handling, naming, build/CI config. Apply when reviewing or writing Go code in cocoonstack projects.
+description: Cocoon code style standards for Go projects — declaration layout (single top-of-file const/var block), test-file layout (tests before helpers), signature naming (named constraints and func types), hard comment budget (STE 101 register), mandatory modern Go (1.25/1.26 idioms), import grouping, logging (core/log), context handling, error handling, naming, build/CI config. Apply when reviewing or writing Go code in cocoonstack projects.
 ---
 
 # Code Review & Refactor Standard
 
 ## Style Self-Check (mandatory)
 
-After writing or editing any Go file, re-scan the final file top-to-bottom against this list and fix every violation before presenting or committing. Do this walkthrough yourself — never delegate it to subagents. The rules apply to every file you touch — if an edited file already violates them, fix it in the same change.
+After writing or editing any Go file, re-scan the final file top-to-bottom against this list and fix every violation before presenting or committing. The rules apply to every file you touch — if an edited file already violates them, fix it in the same change. Pure moves and file splits are not exempt: extraction is exactly when the touched-file rule fires.
+
+Division of labor on any pass wider than one diff: opus/sonnet subagents read the files — each file in full via `Read`, never grep/sed sampling, which loses context — against an explicitly enumerated rule list and return a per-file verdict ledger with line numbers; the session model (Fable) plans, batches, picks models (sonnet for mechanical scans, opus for judgment-heavy reads), adjudicates every finding by re-reading the cited source, and walks the final diff of every touched file through this checklist itself. Subagent output is unverified text until adjudicated; a green `asl` run is not layout compliance.
 
 1. **Declaration layout** — order: imports → `const` block → `var` block → types & funcs. At most one top-level `const` block and one data `var` block per file, both at the top; never below the first `func`. A single declaration uses the bare form (gofumpt strips single-entry parens). Compile-time interface checks are the exception: they stand alone immediately above the implementing type. Type blocks are atomic: a type is immediately followed by its complete method set — nothing in between (see File Organization). In `_test.go` files, every test func comes before all helpers (see Test File Organization).
-2. **Comments** — hard budget (see Comment Style): default is zero. The complete allowance is one-line godoc on exported identifiers and one-line WHY-comments carrying information the code cannot. Everything else is a violation — restated code, section labels, edit narration, multi-line justification narrative. Apply the deletion test to every comment in the file, not only ones you wrote.
+2. **Comments** — hard budget (see Comment Style): default is zero. The complete allowance is one-line godoc on exported identifiers and one-line WHY-comments carrying information the code cannot, both in the STE 101 register. Everything else is a violation — restated code, section labels, edit narration, multi-line justification narrative, the same fact at godoc and call site, any inline comment in a `_test.go` file. A fix, sweep, or cut commit adds zero comments (rationale goes in the commit message) and never raises a file's comment count. Apply the deletion test to every comment in the file, not only ones you wrote.
 3. **Logging** — level matches severity; `Error`/`Errorf`/`Fatalf` take `err` structurally, never embedded via `%v`; no `f` variant without a `%` verb (sole allowance: `Fatalf`, since no non-f `Fatal` exists).
 4. **Imports** — three groups: stdlib / external / internal.
 5. **Context** — no `context.TODO()`; propagate the caller's `ctx`.
@@ -24,6 +26,7 @@ After writing or editing any Go file, re-scan the final file top-to-bottom again
 - No Claude / AI / Anthropic references anywhere in commits, PR bodies, or issues
 - Keep commit messages concise: one-line summary, optional body for why
 - Layout-only normalization (reordering declarations to match this standard) rides in its own `review:` commit, never mixed with behavior changes — the message names the rule being applied
+- A bug found during a style/audit round is fixed in that round, in its own commit with a regression test where one is cheap — never parked in a report, never folded into a `review:` commit. Gate the fix on re-reading the source and proving the failure reachable from a real call site
 
 ## Git Workflow
 
@@ -37,11 +40,12 @@ After writing or editing any Go file, re-scan the final file top-to-bottom again
 
 Every round of changes must complete these steps before committing:
 
-1. **Style Self-Check** — run the checklist at the top of this document on every changed file
-2. **Senior Tech Review** — review all changed code for correctness, edge cases, and consistency
-3. **Run `/simplify`** — launch three parallel review agents (reuse, quality, efficiency), fix all actionable findings
-4. **`make lint`** — must pass on both `GOOS=darwin` and `GOOS=linux` (dual-platform lint, zero issues)
-5. **`asl ./...`** — structural layout gate (test-helper placement, inline constraints, duplicated func types, const/var placement, unexported-method-above-exported partition), zero findings on both GOOS; source lives in `~/Documents/workspace/asl`, install via `go install`
+1. **Style Self-Check** — walk every changed file, `_test.go` included, against the checklist yourself; before committing print each file's declaration map (`grep -n '^func \|^type ' <file>`) and confirm the order — a verification aid, never a substitute for reading the file
+2. **Senior Tech Review** — correctness, edge cases, consistency; no contrived scenarios — if retry/GC already converges, the failure is already loud, and the residue is already bounded, no mechanism is added
+3. **Run `/simplify`** — three parallel review agents (reuse, quality, efficiency) over the whole diff, `_test.go` included; fix all actionable findings. The order is fixed: personal walkthrough → `/simplify` → gates; agents check substance and never stand in for the layout rules
+4. **`make lint` and `make fmt-check`** — separate targets, the lint workflow runs both; zero issues on `GOOS=darwin` and `GOOS=linux`, run with `GOWORK=off` (the workspace `go.work` resolves sibling checkouts and diverges from CI). fmt authority is the pinned golangci-lint from the Makefile, never a local `gofumpt@latest`. Multi-module repos (sandbox: 5 modules) `go mod tidy` every module after any pin change and count the `0 issues.` lines — modules × 2 GOOS; one short means lint died inside a module
+5. **`asl ./...`** on both GOOS — zero findings. Eight analyzers: `topdecl`, `testorder`, `constraintname`, `functypedup`, `methodpartition`, `funcpartition`, `methodinterleave`, `typeblockgap`. Deliberately NOT covered — standalone-func placement relative to other receivers' method sets, vocabulary-type clustering, producer-method trailing — stays in the walkthrough. Source `~/Documents/workspace/asl` (`make install`, or the rolling Linux binaries at https://github.com/CMGS/asl/releases/tag/latest); `~/.claude/hooks/asl-gate.sh` blocks `git commit` on findings and compiles through `go.work`, so the local sibling checkout must match the `go.mod` pin
+6. **`git status` before `git add -A`** — tag-gated builds use `go build -o /dev/null` or `go vet -tags X`; a binary must never reach the index
 
 ## Cocoon Code Style Reference
 
@@ -161,7 +165,7 @@ string comparison.
 - Utility/standalone functions: public on top, private below, grouped by functionality (not interleaved)
 - Place utility functions below struct methods in the same file
 - Precedence: grouping beats visibility — keep a type's methods together and utilities below them; "public above private" applies within each group and yields to type-block atomicity across groups, never across the whole file
-- Compile-time interface checks: standalone immediately above the implementing type — bare for one assertion, own `var ( ... )` block for several
+- Compile-time interface checks: standalone immediately above the implementing type — bare for one assertion, own `var ( ... )` block for several — in the type's file even when the interface lives elsewhere
 
 ### Test File Organization
 
@@ -288,6 +292,7 @@ type VM struct {
 - Config: `fmt.Errorf("root_dir must not be empty")`
 - All error messages lowercase, action-oriented
 - Aggregate close errors in defers: `defer func() { err = errors.Join(err, f.Close()) }()`
+- Before widening the error surface of a shared lock/store primitive (joining an Unlock error into a mutate-under-lock return), enumerate every caller's on-error path: callers encode `error ⇒ mutation absent` and roll back destructively, so a post-commit failure stays log-only or becomes distinguishable
 
 ### Comment Style
 
@@ -299,6 +304,8 @@ allowance:
 - **One-line WHY** — a hidden constraint, race condition, external-system quirk, or the reason a non-obvious approach was required. States the constraint itself; never a justification narrative.
 - **`//nolint:linter`** on specific lines only, with reason if non-obvious.
 
+**Register — STE 101** (Simplified Technical English): one short sentence per comment, present tense, one fact per sentence, no hedging or narrative; inline comments start lowercase, godoc keeps the identifier's case. PR inline replies use the same register.
+
 Everything else is a violation:
 
 - unexported declarations whose name carries the meaning get no comment at all — comment only magic values, non-obvious units, encoded invariants
@@ -306,6 +313,9 @@ Everything else is a violation:
 - narrating steps or labeling sections (`// step 2: validate input`, `// --- helpers ---`)
 - describing the edit instead of the code (`// now also handles IPv6`, `// changed to use errors.Is`)
 - multi-line explanation — if the WHY needs a paragraph, restructure the code instead
+- the same fact at both the godoc and the call site — pick the call site
+- any comment added by a fix, sweep, or cut commit — the rationale goes in the commit message; a well-named variable or flag is the comment. Comment count in such commits is monotonically non-increasing, and code that had no comment gets none
+- inline comments in `_test.go` — the test name and assertion messages carry it
 
 **Deletion test**: if removing a comment costs a competent Go reader nothing, remove it — apply this to every comment in code you touch, not only code you wrote.
 
@@ -331,7 +341,8 @@ Everything else is a violation:
 
 - No `init()` functions — wire dependencies explicitly in constructors and `main` (gochecknoinits is enforced)
 - No `panic()` in non-test code — return errors
-- Bounded concurrent fan-out via `errgroup.WithContext`; dedup identical in-flight work via `singleflight`
+- Bounded concurrent fan-out via `errgroup.WithContext` + `SetLimit`, not a hand-rolled semaphore; dedup identical in-flight work via `singleflight`
+- Never relax a fail-fast startup check to warn-and-continue by analogy with a best-effort loop elsewhere. Answer with code first: what mechanism makes the analog safe (a `default.*` sysctl key that late devices inherit), which retry loop the fail-fast already rides on (systemd `Restart=`, controller requeue), and what state the degraded run would persist or hand out
 
 ### Go Modern Features
 
@@ -356,6 +367,8 @@ Replace on sight:
 | near-identical funcs per type | generics (`Store[T]`, `ResolveRef[T]`) |
 | callback-style traversal APIs | `iter.Seq` / `iter.Seq2` range-over-func |
 | `wg.Add(1)` + `go func` + `defer wg.Done()` | `wg.Go(func() { ... })` |
+| `append(append([]T{}, a...), b...)` | `slices.Concat(a, b)` |
+| filter loop building a new slice | `slices.DeleteFunc` — only when nothing observes the input: it zeroes the tail in place, and a shared test fixture is an observer |
 
 Example — existence check over config slices:
 
@@ -399,6 +412,8 @@ passes.
 
 - Extract helpers shared across packages into a `utils/` package; helpers private to one package stay in that package's `utils.go`
 - Extract generic patterns into reusable generic functions
+- Duplicates that encode a contract get extracted regardless of size — a 2-line policy mapping written twice (`--force → StopTimeoutSeconds=-1`) becomes one named owner a test can pin; "too small to extract" is wrong when the duplicate is policy
+- When review finds the same invariant missing at sibling call sites, unify it in the same PR as one commit behind a named helper — never leave the codebase logically inconsistent for scope reasons
 - If multiple projects share the same utils/generic code, consolidate into one project (do not create a new repo) and have others import via `go mod`
 
 ### Test Patterns
@@ -418,8 +433,8 @@ All projects must have consistent tooling matching cocoon:
 
 Targets: `all`, `build`, `test`, `vet`, `lint`, `fmt`, `fmt-check`, `deps`, `coverage`, `clean`, `help`
 - Each target has `## help comment`
-- Tool versions as variables: `GOLANGCILINT_VERSION ?= v2.9.0`
-- `vet` and `lint` run with GOOS matrix (linux + darwin)
+- Tool versions as variables (`GOLANGCILINT_VERSION ?= v2.12.2`, same for gofumpt/goimports), installed under `LOCALBIN ?= $(shell pwd)/bin` as version-suffixed binaries so every machine and CI run the same tools
+- `vet` and `lint` iterate one shared `GOOSES ?= linux darwin` loop
 - `fmt` uses gofumpt + goimports
 
 ### GitHub Actions
