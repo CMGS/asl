@@ -25,8 +25,15 @@ func run(pass *analysis.Pass) (any, error) {
 func checkFile(pass *analysis.Pass, f *ast.File) {
 	seq := source.Decls(f)
 	last := map[string]source.Decl{}
-	for _, d := range seq {
-		if d.Recv != "" && ast.IsExported(d.Name) {
+	prev := map[string]int{}
+	for i, d := range seq {
+		if d.Recv == "" {
+			continue
+		}
+		p, seen := prev[d.Recv]
+		prev[d.Recv] = i
+		// a producer trailing the block it produces (Sandbox.OpenPty below Pty) ends no exported set
+		if ast.IsExported(d.Name) && !(seen && d.ProducesAny(pass, seq[p+1:i])) {
 			last[d.Recv] = d
 		}
 	}

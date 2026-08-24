@@ -52,3 +52,15 @@ func (b *box[T]) Take() T { return b.v }
 func standalone() {}
 
 func Standalone() {}
+
+type Sandbox struct{}
+
+func (s *Sandbox) Run() {}
+
+func (s *Sandbox) cleanup() {}
+
+type Pty struct{}
+
+func (p *Pty) Close() {}
+
+func (s *Sandbox) OpenPty() *Pty { return nil }
