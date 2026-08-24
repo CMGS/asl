@@ -5,8 +5,8 @@ import (
 	"go/ast"
 	"go/token"
 	"go/types"
+	"maps"
 	"slices"
-	"strings"
 
 	"golang.org/x/tools/go/analysis"
 
@@ -53,15 +53,13 @@ func run(pass *analysis.Pass) (any, error) {
 			return true
 		})
 	}
-	for sig, sites := range groups {
-		report(pass, sig, sites)
+	for _, sig := range slices.Sorted(maps.Keys(groups)) {
+		report(pass, sig, groups[sig])
 	}
 	return nil, nil
 }
 
-// report flags a group only when it spells one contract: a func result (factory) is always a
-// contract; same-shape fields count only under the same name — coincidental shape twins with
-// different meanings stay inline.
+// report flags a group only when it spells one contract: any func result, or one name at two sites.
 func report(pass *analysis.Pass, sig string, sites []site) {
 	if len(sites) < 2 {
 		return
@@ -72,7 +70,7 @@ func report(pass *analysis.Pass, sig string, sites []site) {
 		for _, s := range sites {
 			names[s.field]++
 		}
-		eligible = slices.DeleteFunc(slices.Clone(sites), func(s site) bool { return names[s.field] < 2 })
+		eligible = slices.DeleteFunc(sites, func(s site) bool { return names[s.field] < 2 })
 		if len(eligible) < 2 {
 			return
 		}
@@ -98,36 +96,13 @@ func record(pass *analysis.Pass, groups map[string][]site, e ast.Expr, s site) {
 
 // canonical prints the signature without parameter names so naming differences still dedupe.
 func canonical(sig *types.Signature) string {
-	qf := func(p *types.Package) string { return p.Name() }
-	var b strings.Builder
-	b.WriteString("func(")
-	params := sig.Params()
-	for i := range params.Len() {
-		if i > 0 {
-			b.WriteString(", ")
-		}
-		t := params.At(i).Type()
-		if sig.Variadic() && i == params.Len()-1 {
-			b.WriteString("...")
-			t = t.(*types.Slice).Elem()
-		}
-		b.WriteString(types.TypeString(t, qf))
+	return types.TypeString(types.NewSignatureType(nil, nil, nil, unnamed(sig.Params()), unnamed(sig.Results()), sig.Variadic()), (*types.Package).Name)
+}
+
+func unnamed(t *types.Tuple) *types.Tuple {
+	vars := make([]*types.Var, 0, t.Len())
+	for v := range t.Variables() {
+		vars = append(vars, types.NewVar(token.NoPos, nil, "", v.Type()))
 	}
-	b.WriteString(")")
-	results := sig.Results()
-	switch results.Len() {
-	case 0:
-	case 1:
-		b.WriteString(" " + types.TypeString(results.At(0).Type(), qf))
-	default:
-		b.WriteString(" (")
-		for i := range results.Len() {
-			if i > 0 {
-				b.WriteString(", ")
-			}
-			b.WriteString(types.TypeString(results.At(i).Type(), qf))
-		}
-		b.WriteString(")")
-	}
-	return b.String()
+	return types.NewTuple(vars...)
 }
