@@ -29,7 +29,7 @@ func checkFile(pass *analysis.Pass, f *ast.File) {
 	last := -1
 	for i, d := range seq {
 		fileTypes = append(fileTypes, d.Types...)
-		if d.IsFunc() && ast.IsExported(d.Name) {
+		if d.IsFunc() && !d.IsTest() && ast.IsExported(d.Name) {
 			last = i
 		}
 	}
@@ -37,7 +37,7 @@ func checkFile(pass *analysis.Pass, f *ast.File) {
 		return
 	}
 	for _, d := range seq[:last] {
-		if !d.IsFunc() || ast.IsExported(d.Name) || d.Name == "main" || d.Name == "init" {
+		if !d.IsFunc() || d.IsTest() || ast.IsExported(d.Name) || d.Name == "main" || d.Name == "init" {
 			continue
 		}
 		if slices.ContainsFunc(fileTypes, func(t string) bool { return d.Produces(pass, t) }) {

@@ -5,9 +5,12 @@ import (
 	"go/token"
 	"go/types"
 	"slices"
+	"strings"
 
 	"golang.org/x/tools/go/analysis"
 )
+
+var testPrefixes = []string{"Test", "Benchmark", "Fuzz", "Example"}
 
 // Decl is one top-level func, method, or type block of a file.
 type Decl struct {
@@ -20,6 +23,11 @@ type Decl struct {
 // IsFunc reports whether d is a standalone func.
 func (d Decl) IsFunc() bool {
 	return d.Recv == "" && d.Types == nil
+}
+
+// IsTest reports whether d is a test, benchmark, fuzz, or example func.
+func (d Decl) IsTest() bool {
+	return d.IsFunc() && slices.ContainsFunc(testPrefixes, func(p string) bool { return strings.HasPrefix(d.Name, p) })
 }
 
 // Mentions reports whether the func signature names t.
