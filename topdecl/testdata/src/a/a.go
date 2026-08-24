@@ -10,4 +10,4 @@ const late = 2 // want `const declaration below the first func; move it into the
 
 var lateVar int // want `var declaration below the first func; move it into the top block`
 
-var _ = work
+var _ = work // want `var declaration below the first func; move it into the top block`

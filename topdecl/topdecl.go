@@ -4,6 +4,7 @@ package topdecl
 import (
 	"go/ast"
 	"go/token"
+	"slices"
 
 	"golang.org/x/tools/go/analysis"
 
@@ -12,7 +13,7 @@ import (
 
 var Analyzer = &analysis.Analyzer{
 	Name: "topdecl",
-	Doc:  "flag const/var declarations below the first func or split across blocks",
+	Doc:  "flag const/var declarations below the first func, split across blocks, or out of const-then-var order",
 	Run:  run,
 }
 
@@ -25,11 +26,8 @@ func run(pass *analysis.Pass) (any, error) {
 
 func checkFile(pass *analysis.Pass, f *ast.File) {
 	firstFunc := token.NoPos
-	for _, d := range f.Decls {
-		if _, ok := d.(*ast.FuncDecl); ok {
-			firstFunc = d.Pos()
-			break
-		}
+	if i := slices.IndexFunc(f.Decls, func(d ast.Decl) bool { _, ok := d.(*ast.FuncDecl); return ok }); i >= 0 {
+		firstFunc = f.Decls[i].Pos()
 	}
 	blocks := map[token.Token]int{}
 	for _, d := range f.Decls {
@@ -45,6 +43,9 @@ func checkFile(pass *analysis.Pass, f *ast.File) {
 		if blocks[gd.Tok] > 1 {
 			pass.Reportf(gd.Pos(), "more than one top-level %s block; merge into a single block", gd.Tok)
 		}
+		if gd.Tok == token.CONST && blocks[token.VAR] > 0 {
+			pass.Reportf(gd.Pos(), "const block below the var block; declare const first")
+		}
 	}
 }
 
@@ -55,7 +56,7 @@ func isCheckOnly(gd *ast.GenDecl) bool {
 	}
 	for _, spec := range gd.Specs {
 		vs, ok := spec.(*ast.ValueSpec)
-		if !ok {
+		if !ok || vs.Type == nil {
 			return false
 		}
 		for _, name := range vs.Names {
