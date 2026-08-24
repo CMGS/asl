@@ -12,7 +12,7 @@ import (
 
 var Analyzer = &analysis.Analyzer{
 	Name: "typeblockgap",
-	Doc:  "flag declarations placed between a type declaration and that type's first method",
+	Doc:  "flag declarations placed between a type declaration and that type's first method, or a type declared below its methods",
 	Run:  run,
 }
 
@@ -28,6 +28,10 @@ func checkFile(pass *analysis.Pass, f *ast.File) {
 	first := firstMethods(seq)
 	for owner, block := range seq {
 		m := blockFirstMethod(block, first)
+		if m >= 0 && m < owner {
+			pass.Reportf(block.Node.Pos(), "type %s declared below its method %s; declare the type above its method set", block.Name, seq[m].Name)
+			continue
+		}
 		for i := owner + 1; i < m; i++ {
 			if exempt(pass, seq, i, owner, m) {
 				continue

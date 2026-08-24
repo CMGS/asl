@@ -16,7 +16,7 @@ func (t tracker) reset() {}
 
 func (s *Session) Close() error { return nil }
 
-type tracker struct{}
+type tracker struct{} // want `type tracker declared below its method reset; declare the type above its method set`
 
 func (t tracker) record() {}
 
@@ -37,3 +37,7 @@ type Item struct{} // want `type Item is split from its first method ID by stand
 func validate() error { _ = Item{}; return nil }
 
 func (i Item) ID() int { return 0 }
+
+func (l *Late) Run() {}
+
+type Late struct{} // want `type Late declared below its method Run; declare the type above its method set`
