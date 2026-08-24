@@ -4,6 +4,7 @@ package typeblockgap
 import (
 	"go/ast"
 	"go/token"
+	"go/types"
 	"slices"
 
 	"golang.org/x/tools/go/analysis"
@@ -39,7 +40,7 @@ func checkFile(pass *analysis.Pass, f *ast.File) {
 	for owner, block := range seq {
 		m := blockFirstMethod(block, first)
 		for i := owner + 1; i < m; i++ {
-			if exempt(seq, i, owner, m) {
+			if exempt(pass, seq, i, owner, m) {
 				continue
 			}
 			pass.Reportf(block.node.Pos(), "type %s is split from its first method %s by %s; keep the type declaration and its method set contiguous", block.name, seq[m].name, describe(seq[i]))
@@ -101,7 +102,7 @@ func blockFirstMethod(d decl, first map[string]int) int {
 
 // exempt reports the two sanctioned shapes: a producer of the owner type, and a
 // result type directly above the owner method consuming it (`SizeSpec` above `Size.Spec`).
-func exempt(seq []decl, i, owner, m int) bool {
+func exempt(pass *analysis.Pass, seq []decl, i, owner, m int) bool {
 	d, o := seq[i], seq[owner]
 	switch {
 	case d.types != nil:
@@ -109,7 +110,7 @@ func exempt(seq []decl, i, owner, m int) bool {
 	case d.recv != "":
 		return false
 	default:
-		return slices.ContainsFunc(o.types, func(t string) bool { return produces(d, t) })
+		return slices.ContainsFunc(o.types, func(t string) bool { return produces(pass, d, t) })
 	}
 }
 
@@ -128,27 +129,20 @@ func consumedBy(d decl, name string) bool {
 	return found
 }
 
-// produces reports the constructor shape: the func returns the type, or builds it
-// behind a return of the interface it implements (`NewX(...) Iface { return &x{} }`).
-func produces(d decl, name string) bool {
+// produces reports whether the func returns name or an interface it implements.
+func produces(pass *analysis.Pass, d decl, name string) bool {
 	fd, ok := d.node.(*ast.FuncDecl)
-	if !ok {
+	if !ok || fd.Type.Results == nil {
 		return false
 	}
-	if fd.Type.Results != nil && slices.ContainsFunc(fd.Type.Results.List, func(r *ast.Field) bool { return identName(r.Type) == name }) {
-		return true
-	}
-	if fd.Body == nil {
-		return false
-	}
-	found := false
-	ast.Inspect(fd.Body, func(n ast.Node) bool {
-		if lit, ok := n.(*ast.CompositeLit); ok && identName(lit.Type) == name {
-			found = true
+	obj := pass.Pkg.Scope().Lookup(name)
+	return slices.ContainsFunc(fd.Type.Results.List, func(r *ast.Field) bool {
+		if identName(r.Type) == name {
+			return true
 		}
-		return !found
+		iface, ok := pass.TypesInfo.TypeOf(r.Type).Underlying().(*types.Interface)
+		return ok && obj != nil && (types.Implements(obj.Type(), iface) || types.Implements(types.NewPointer(obj.Type()), iface))
 	})
-	return found
 }
 
 func describe(d decl) string {

@@ -1,5 +1,7 @@
 package a
 
+import "b"
+
 type closer interface{ Close() error }
 
 var _ closer = (*Handle)(nil)
@@ -57,3 +59,9 @@ type staticSource struct{ n int }
 func newInfoSource(n int) infoSource { return &staticSource{n: n} }
 
 func (s *staticSource) info() int { return s.n }
+
+type cni struct{}
+
+func newCNI() b.Network { return &cni{} }
+
+func (c *cni) Up() {}

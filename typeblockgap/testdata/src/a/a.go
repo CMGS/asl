@@ -25,3 +25,15 @@ type Registry struct{} // want `type Registry is split from its first method Loo
 func normalize(name string) string { return name }
 
 func (r *Registry) Lookup(name string) bool { return name == "" }
+
+type Cache struct{} // want `type Cache is split from its first method Get by standalone function warm; keep the type declaration and its method set contiguous`
+
+func warm() { _ = &Cache{} }
+
+func (c *Cache) Get() {}
+
+type Item struct{} // want `type Item is split from its first method ID by standalone function validate; keep the type declaration and its method set contiguous`
+
+func validate() error { _ = Item{}; return nil }
+
+func (i Item) ID() int { return 0 }
