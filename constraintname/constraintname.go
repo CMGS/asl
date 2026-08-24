@@ -16,10 +16,7 @@ var Analyzer = &analysis.Analyzer{
 }
 
 func run(pass *analysis.Pass) (any, error) {
-	for _, f := range pass.Files {
-		if !source.Checkable(pass, f) {
-			continue
-		}
+	for f := range source.Files(pass) {
 		ast.Inspect(f, func(n ast.Node) bool {
 			var params *ast.FieldList
 			switch d := n.(type) {
@@ -45,12 +42,10 @@ func run(pass *analysis.Pass) (any, error) {
 }
 
 func hasInterfaceLit(e ast.Expr) bool {
-	found := false
-	ast.Inspect(e, func(n ast.Node) bool {
+	for n := range ast.Preorder(e) {
 		if _, ok := n.(*ast.InterfaceType); ok {
-			found = true
+			return true
 		}
-		return !found
-	})
-	return found
+	}
+	return false
 }

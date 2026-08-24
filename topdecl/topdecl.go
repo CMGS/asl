@@ -17,10 +17,8 @@ var Analyzer = &analysis.Analyzer{
 }
 
 func run(pass *analysis.Pass) (any, error) {
-	for _, f := range pass.Files {
-		if source.Checkable(pass, f) {
-			checkFile(pass, f)
-		}
+	for f := range source.Files(pass) {
+		checkFile(pass, f)
 	}
 	return nil, nil
 }

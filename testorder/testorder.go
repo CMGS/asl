@@ -23,8 +23,8 @@ var (
 )
 
 func run(pass *analysis.Pass) (any, error) {
-	for _, f := range pass.Files {
-		if source.Checkable(pass, f) && strings.HasSuffix(pass.Fset.Position(f.Pos()).Filename, "_test.go") {
+	for f := range source.Files(pass) {
+		if source.IsTest(pass, f) {
 			checkFile(pass, f)
 		}
 	}
