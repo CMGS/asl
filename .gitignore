@@ -1,1 +1,4 @@
 asl
+asl-linux-*
+bin/
+coverage.out

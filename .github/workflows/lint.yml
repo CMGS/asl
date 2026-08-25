@@ -1,0 +1,19 @@
+name: lint
+
+on:
+  push:
+    branches: ['*']
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - name: golangci-lint (linux + darwin)
+        run: make lint
+      - name: Check formatting (gofumpt + goimports)
+        run: make fmt-check
