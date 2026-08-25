@@ -33,7 +33,7 @@ func checkFile(pass *analysis.Pass, f *ast.File) {
 		p, seen := prev[d.Recv]
 		prev[d.Recv] = i
 		// a producer trailing the block it produces (Sandbox.OpenPty below Pty) ends no exported set
-		if ast.IsExported(d.Name) && !(seen && d.ProducesAny(pass, seq[p+1:i])) {
+		if ast.IsExported(d.Name) && (!seen || !d.ProducesAny(pass, seq[p+1:i])) {
 			last[d.Recv] = d
 		}
 	}
