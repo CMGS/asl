@@ -348,10 +348,17 @@ Everything else is a violation:
 ### Go Modern Features
 
 Mandatory, enforced as Style Self-Check item 7. Write against the
-toolchain in go.mod (Go 1.25/1.26); hand-rolling what the language or
-stdlib already provides is a violation of the same severity as a layout
-break. The `modernize` linter catches part of this — the self-check
-covers the rest.
+toolchain in go.mod; hand-rolling what the language or stdlib already
+provides is a violation of the same severity as a layout break.
+
+The live catalog is the `use-modern-go` skill (JetBrains
+go-modern-guidelines plugin): before writing or reviewing Go, run its
+`list --file-path <file>` — it resolves the repo's Go version from go.mod
+and prints every applicable idiom (54 rules, 1.0→1.27, newer than any
+training cutoff); `explain <id>` gives before/after. The `modernize`
+linter gates a subset mechanically after the fact. The table below is the
+house-curated floor — entries the catalog lacks plus the caveats it
+doesn't carry; it no longer tracks the stdlib exhaustively.
 
 Replace on sight:
 

@@ -86,9 +86,11 @@ over-design lens; every agent reads its files in full and returns
   a cut if net-negative.
 - **over-abstraction**: generics/interfaces/option patterns with exactly one
   concrete user; layers that only forward.
-- **hand-rolled stdlib**: loops/plumbing the Go 1.25/1.26 toolchain already
-  provides (see /code Modern Features table); 50+ line funcs reducible to a
-  utils/stdlib call.
+- **hand-rolled stdlib**: loops/plumbing the toolchain already provides —
+  the agent's brief carries the `use-modern-go` CLI `list` output for the
+  repo's Go version (version-correct, 1.0→1.27) plus the /code Modern
+  Features table's house caveats; 50+ line funcs reducible to a utils/stdlib
+  call.
 - **unreachable defense**: guards whose failure mode cannot occur given the
   actual callers — the agent must enumerate call sites, not pattern-match.
 - **over-design / contrived-case protection** (CMGS 2026-07-17): mechanisms
