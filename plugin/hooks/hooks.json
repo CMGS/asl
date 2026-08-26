@@ -1,0 +1,17 @@
+{
+  "description": "Commit gate: asl layout findings block Go repos; review/fix commits must not add comment lines.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/asl-gate.sh\"",
+            "timeout": 180
+          }
+        ]
+      }
+    ]
+  }
+}

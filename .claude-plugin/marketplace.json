@@ -1,0 +1,17 @@
+{
+  "name": "asl-marketplace",
+  "owner": {
+    "name": "CMGS"
+  },
+  "metadata": {
+    "description": "Cocoonstack Go standards: asl layout gate plus the code and loc-justify skills",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "cocoon-code-standards",
+      "description": "Cocoonstack code standards: /code and /loc-justify skills with the asl commit gate",
+      "source": "./plugin"
+    }
+  ]
+}

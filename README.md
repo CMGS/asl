@@ -100,16 +100,33 @@ go vet -vettool=$(command -v asl) ./...
 asl -testorder=false ./...   # disable an analyzer
 ```
 
-## Skills
+## Claude Code plugin
 
-`.claude/skills/` vendors the agent skills this checker mechanizes a slice
-of, for reuse in other projects — copy a directory into your own skills
-location (project `.claude/skills/` or user-level `~/.claude/skills/`):
+The repo doubles as a plugin marketplace shipping the standards this checker
+mechanizes a slice of:
 
-- **code** — the full Go style standard: declaration layout, comment budget,
-  logging, modern-Go idioms, naming, error handling, build/CI config. asl
-  enforces its mechanically checkable layout rules; the rest stays in the
+```
+/plugin marketplace add CMGS/asl
+/plugin install cocoon-code-standards@asl-marketplace
+```
+
+The plugin carries:
+
+- **code** skill — the full Go style standard: declaration layout, comment
+  budget, logging, modern-Go idioms, naming, error handling, build/CI config.
+  asl enforces its mechanically checkable layout rules; the rest stays in the
   review walkthrough.
-- **loc-justify** — whole-repo production-LOC audit: measure and attribute
-  code mass with exact commands, then force an item-by-item EARNED/CHALLENGED
-  verdict with a ranked cut-list.
+- **loc-justify** skill — whole-repo production-LOC audit: measure and
+  attribute code mass with exact commands, then force an item-by-item
+  EARNED/CHALLENGED verdict with a ranked cut-list.
+- **commit gate hook** (`plugin/hooks/asl-gate.sh`) — a PreToolUse hook on
+  `git commit` that resolves the repo the command targets, blocks Go repos
+  with asl findings (both GOOS), and blocks `review:`/`fix:`-class commits
+  whose staged diff adds more comment lines than it removes. The hook no-ops
+  when `asl` is not on PATH — install it per the Install section, built with
+  a Go toolchain matching the gated repos' `go` directive. If your
+  `settings.json` already wires the same gate, install the plugin without the
+  hook copy or drop the settings entry — otherwise the gate runs twice.
+
+Sources live under `plugin/skills/` and `plugin/hooks/`; copying a skill
+directory into `~/.claude/skills/` still works without the plugin.
