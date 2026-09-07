@@ -1,4 +1,4 @@
-// Package cmpor flags zero-value fallbacks written as an if statement that cmp.Or expresses in one call.
+// Package cmpor flags zero-value fallbacks written as an if statement that cmp.Or expresses in one call; -fix rewrites them (run goimports after for the cmp import).
 package cmpor
 
 import (
@@ -41,6 +41,24 @@ func run(pass *analysis.Pass) (any, error) {
 }
 
 func checkBlock(pass *analysis.Pass, stmts []ast.Stmt) {
+	src := func(e ast.Expr) string {
+		f := pass.Fset.File(e.Pos())
+		data, err := pass.ReadFile(f.Name())
+		if err != nil {
+			return types.ExprString(e)
+		}
+		return string(data[f.Offset(e.Pos()):f.Offset(e.End())])
+	}
+	report := func(pos, end token.Pos, msg, fix string) {
+		pass.Report(analysis.Diagnostic{
+			Pos:     pos,
+			Message: msg,
+			SuggestedFixes: []analysis.SuggestedFix{{
+				Message:   "use cmp.Or",
+				TextEdits: []analysis.TextEdit{{Pos: pos, End: end, NewText: []byte(fix)}},
+			}},
+		})
+	}
 	for i, stmt := range stmts {
 		ifs, ok := stmt.(*ast.IfStmt)
 		if !ok || ifs.Init != nil || ifs.Else != nil || len(ifs.Body.List) != 1 {
@@ -65,13 +83,15 @@ func checkBlock(pass *analysis.Pass, stmts []ast.Stmt) {
 				kept, fallback = fallback, kept
 			}
 			if types.ExprString(kept) == name && pure(fallback) {
-				pass.Reportf(ifs.Pos(), "if/return fallback on %s is cmp.Or(%s, %s)", name, name, types.ExprString(fallback))
+				call := "cmp.Or(" + src(x) + ", " + src(fallback) + ")"
+				report(ifs.Pos(), next.End(), "if/return fallback on "+name+" is "+call, "return "+call)
 			}
 		case *ast.AssignStmt:
 			if nonZero || body.Tok != token.ASSIGN || len(body.Lhs) != 1 || len(body.Rhs) != 1 || types.ExprString(body.Lhs[0]) != name || !pure(body.Rhs[0]) {
 				continue
 			}
-			pass.Reportf(ifs.Pos(), "zero-value fallback on %s is %s = cmp.Or(%s, %s)", name, name, name, types.ExprString(body.Rhs[0]))
+			call := "cmp.Or(" + src(x) + ", " + src(body.Rhs[0]) + ")"
+			report(ifs.Pos(), ifs.End(), "zero-value fallback on "+name+" is "+name+" = "+call, src(x)+" = "+call)
 		}
 	}
 }

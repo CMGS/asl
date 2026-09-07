@@ -1,0 +1,73 @@
+package a
+
+import "time"
+
+type conf struct {
+	name  string
+	ptr   *int
+	items []string
+	n     uint
+	d     time.Duration
+}
+
+func (c conf) label(def string) string {
+	return cmp.Or(c.name, def)
+}
+
+func pick(a, b *int) *int {
+	return cmp.Or(a, b)
+}
+
+func assign(c *conf, def string) {
+	c.name = cmp.Or(c.name, def)
+}
+
+func unsigned(c conf) uint {
+	return cmp.Or(c.n, 4)
+}
+
+func signedStaysHuman(c conf) time.Duration {
+	if c.d > 0 {
+		return c.d
+	}
+	return time.Second
+}
+
+func sliceIsNotComparable(c conf) []string {
+	if c.items != nil {
+		return c.items
+	}
+	return []string{"x"}
+}
+
+func differentResults(c conf, def string) string {
+	if c.name != "" {
+		return c.name + "!"
+	}
+	return def
+}
+
+func withElse(c conf, def string) string {
+	if c.name != "" {
+		return c.name
+	} else {
+		return def
+	}
+}
+
+func lazyFallbackStays(err error) error {
+	if err != nil {
+		return err
+	}
+	return finish()
+}
+
+func finish() error { return nil }
+
+func assignCallStays(c *conf) {
+	if c.name == "" {
+		c.name = pickName()
+	}
+}
+
+func pickName() string { return "x" }

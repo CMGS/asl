@@ -7,7 +7,7 @@ import (
 )
 
 func TestAnalyzer(t *testing.T) {
-	analysistest.Run(t, analysistest.TestData(), Analyzer, "a")
+	analysistest.RunWithSuggestedFixes(t, analysistest.TestData(), Analyzer, "a")
 }
 
 func TestAnalyzerSigned(t *testing.T) {
