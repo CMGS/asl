@@ -3,6 +3,7 @@ package forwarder
 
 import (
 	"go/ast"
+	"go/build/constraint"
 	"go/types"
 
 	"golang.org/x/tools/go/analysis"
@@ -27,7 +28,7 @@ func run(pass *analysis.Pass) (any, error) {
 	}
 	refs, calls := countUses(pass)
 	for f := range source.Files(pass) {
-		if source.IsTest(pass, f) {
+		if source.IsTest(pass, f) || buildConstrained(f) {
 			continue
 		}
 		for _, d := range f.Decls {
@@ -74,6 +75,21 @@ func countUses(pass *analysis.Pass) (refs, calls map[types.Object]int) {
 		}
 	}
 	return refs, calls
+}
+
+// buildConstrained reports a //go:build file: its one-liners usually have a twin under another tag, so the caller cannot inline them.
+func buildConstrained(f *ast.File) bool {
+	for _, cg := range f.Comments {
+		if cg.Pos() > f.Package {
+			return false
+		}
+		for _, c := range cg.List {
+			if constraint.IsGoBuild(c.Text) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func callee(e ast.Expr) *ast.Ident {
