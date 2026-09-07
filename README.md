@@ -66,10 +66,11 @@ code style standard that `go vet` and golangci-lint cannot express, as a
 
 - **cmpor** — a zero-value fallback written as `if x != zero { return x }; return y`
   (or `if x == zero { x = y }`) is `cmp.Or(x, y)`. Only comparable operands
-  count, so slices and maps never match, and the fallback must be free of
-  calls and func literals because cmp.Or evaluates every argument (the first
-  corpus sweep reported 40 `if err != nil { return err }; return f()` shapes
-  before that rule); `x > 0` matches for unsigned types
+  count, so slices and maps never match; the fallback must have x's exact
+  type (an interface x with a concrete fallback would need an explicit
+  instantiation) and be free of calls and func literals because cmp.Or
+  evaluates every argument (the first corpus sweep reported 40 `if err != nil
+  { return err }; return f()` shapes before that rule); `x > 0` matches for unsigned types
   and, with `-cmpor.signed`, for signed numbers too — that flag is for the
   advisory pass of a review round, not the commit gate, because a negative x
   means something different under cmp.Or (vk-cocoon 2026-09-07: a `WaitReady`

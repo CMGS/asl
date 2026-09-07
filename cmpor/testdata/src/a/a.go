@@ -82,3 +82,16 @@ func assignCallStays(c *conf) {
 }
 
 func pickName() string { return "x" }
+
+type recorder interface{ record() }
+
+type nopRecorder struct{}
+
+func (nopRecorder) record() {}
+
+func concreteFallbackStays(r recorder) recorder {
+	if r == nil {
+		return nopRecorder{}
+	}
+	return r
+}

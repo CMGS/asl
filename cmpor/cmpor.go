@@ -82,12 +82,12 @@ func checkBlock(pass *analysis.Pass, stmts []ast.Stmt) {
 			if !nonZero {
 				kept, fallback = fallback, kept
 			}
-			if types.ExprString(kept) == name && pure(fallback) {
+			if types.ExprString(kept) == name && pure(fallback) && sameType(pass, x, fallback) {
 				call := "cmp.Or(" + src(x) + ", " + src(fallback) + ")"
 				report(ifs.Pos(), next.End(), "if/return fallback on "+name+" is "+call, "return "+call)
 			}
 		case *ast.AssignStmt:
-			if nonZero || body.Tok != token.ASSIGN || len(body.Lhs) != 1 || len(body.Rhs) != 1 || types.ExprString(body.Lhs[0]) != name || !pure(body.Rhs[0]) {
+			if nonZero || body.Tok != token.ASSIGN || len(body.Lhs) != 1 || len(body.Rhs) != 1 || types.ExprString(body.Lhs[0]) != name || !pure(body.Rhs[0]) || !sameType(pass, x, body.Rhs[0]) {
 				continue
 			}
 			call := "cmp.Or(" + src(x) + ", " + src(body.Rhs[0]) + ")"
@@ -130,6 +130,12 @@ func numericFallback(t types.Type) bool {
 		return false
 	}
 	return b.Info()&types.IsUnsigned != 0 || (signed && b.Info()&types.IsNumeric != 0)
+}
+
+// sameType reports whether y already has x's type: cmp.Or infers one T, so an interface x with a concrete y would need an explicit instantiation.
+func sameType(pass *analysis.Pass, x, y ast.Expr) bool {
+	tx, ty := pass.TypesInfo.TypeOf(x), pass.TypesInfo.TypeOf(y)
+	return tx != nil && ty != nil && types.Identical(tx, ty)
 }
 
 // pure reports whether e has no call or func literal: cmp.Or evaluates every argument, so a fallback with effects must stay lazy.
