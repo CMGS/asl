@@ -8,8 +8,7 @@ import (
 	"golang.org/x/tools/go/analysis"
 )
 
-// ShadowedByTestVariant reports whether pass is the test-free variant of a package that has _test.go files, so a
-// package-wide count taken here would miss the test callers the test variant sees.
+// ShadowedByTestVariant reports the test-free variant of a package with _test.go files, whose package-wide counts would miss the test callers.
 func ShadowedByTestVariant(pass *analysis.Pass) bool {
 	if len(pass.Files) == 0 {
 		return false
