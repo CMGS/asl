@@ -64,6 +64,33 @@ code style standard that `go vet` and golangci-lint cannot express, as a
   shipped analyzers call clean, and one false positive — an interface-returning
   constructor — that set the producer exemption).
 
+- **cmpor** — a zero-value fallback written as `if x != zero { return x }; return y`
+  (or `if x == zero { x = y }`) is `cmp.Or(x, y)`. Only comparable operands
+  count, so slices and maps never match, and the fallback must be free of
+  calls and func literals because cmp.Or evaluates every argument (the first
+  corpus sweep reported 40 `if err != nil { return err }; return f()` shapes
+  before that rule); `x > 0` matches for unsigned types
+  and, with `-cmpor.signed`, for signed numbers too — that flag is for the
+  advisory pass of a review round, not the commit gate, because a negative x
+  means something different under cmp.Or (vk-cocoon 2026-09-07: a `WaitReady`
+  fallback survived four rounds; `modernize` has no analyzer for the shape).
+- **forwarder** — an unexported func or method whose body is one `return` or
+  one call, referenced exactly once in the package (tests included, and the
+  one reference must be a call), spanning four or more lines including its
+  doc comment: inlining saves at least three lines. Shorter ones are never
+  reported — the cocoonstack threshold says a sub-three-line inline is kept,
+  not re-judged every round. Methods matching a package-level interface's
+  method are exempt; the test-free variant of a package that has `_test.go`
+  files stays silent so a test caller is never miscounted, and the one
+  statement spans at most two lines so a long literal or func literal never
+  qualifies. Advisory, not a gate: the commit hook runs `-forwarder=false`,
+  a review round runs it and settles each finding once — inline it, or record
+  it as kept in the repo's hygiene ledger (`scripts/ledger.py`).
+- **labelenum** — a comment enumerating label values (`result=ok|failed`) in a
+  file that imports the Prometheus client. Enumerations drift silently as
+  code adds values (vk-cocoon 2026-09-07: three of twelve were stale); the
+  comment names the meaning, a test or constants own the values.
+
 Deliberately not covered (prose rules with sanctioned exceptions that make
 mechanical checking a false-positive machine): standalone-function placement
 relative to method sets beyond the same-receiver interleave slice (that slice
@@ -98,6 +125,8 @@ asl ./...                 # standalone, vet-style output and exit code
 GOOS=linux asl ./...      # cross-GOOS pass for platform-gated files
 go vet -vettool=$(command -v asl) ./...
 asl -testorder=false ./...   # disable an analyzer
+asl -cmpor.signed ./...      # advisory: also x > 0 fallbacks on signed numbers
+scripts/ledger.py diff <repo> <ledger.tsv> --lens style   # files a review round still has to read
 ```
 
 ## Claude Code plugin

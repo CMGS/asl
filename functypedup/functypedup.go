@@ -102,15 +102,12 @@ func record(pass *analysis.Pass, groups map[string][]site, e ast.Expr, s site) {
 	if !ok {
 		return
 	}
-	if canon := canonical(sig); len(canon) >= minLen {
+	// parameter names are dropped so naming differences still dedupe.
+	canon := types.TypeString(types.NewSignatureType(nil, nil, nil, unnamed(sig.Params()), unnamed(sig.Results()), sig.Variadic()), (*types.Package).Name)
+	if len(canon) >= minLen {
 		s.pos = e.Pos()
 		groups[canon] = append(groups[canon], s)
 	}
-}
-
-// canonical prints the signature without parameter names so naming differences still dedupe.
-func canonical(sig *types.Signature) string {
-	return types.TypeString(types.NewSignatureType(nil, nil, nil, unnamed(sig.Params()), unnamed(sig.Results()), sig.Variadic()), (*types.Package).Name)
 }
 
 func unnamed(t *types.Tuple) *types.Tuple {

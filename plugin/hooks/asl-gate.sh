@@ -24,7 +24,7 @@ gate() {
 	local seg=$1 dir=$2 root fail="" findings prefix range diff added removed
 	root=$(git -C "$dir" rev-parse --show-toplevel 2>/dev/null) || return 0
 	if [ -f "$root/go.mod" ] && command -v asl >/dev/null 2>&1; then
-		findings=$(cd "$root" && { asl ./... 2>&1; GOOS=linux asl ./... 2>&1; } | grep -v '^#' | grep -v '^$' | sort -u)
+		findings=$(cd "$root" && { asl -forwarder=false ./... 2>&1; GOOS=linux asl -forwarder=false ./... 2>&1; } | grep -v '^#' | grep -v '^$' | sort -u)
 		[ -n "$findings" ] && fail+="asl gate: layout findings block this commit (fix, then retry):"$'\n'"$findings"$'\n'
 	fi
 	if [[ $seg =~ -m[[:space:]]*[\"\']?(review|fix|lint|cut|simplify|style|tidy): ]]; then

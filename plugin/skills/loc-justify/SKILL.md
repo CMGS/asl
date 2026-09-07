@@ -85,7 +85,11 @@ over-design lens; every agent reads its files in full and returns
   rule, dedup bias applies — a cut that adds a shared helper still counts as
   a cut if net-negative.
 - **over-abstraction**: generics/interfaces/option patterns with exactly one
-  concrete user; layers that only forward.
+  concrete user; layers that only forward. Threshold (CMGS 2026-09-07): a
+  single-caller inline or forwarder fold that saves fewer than three prod
+  lines is not a finding — readers do not report it, the adjudicator does
+  not re-judge it; the `forwarder` analyzer reports the ones that save three
+  or more, and each of those is decided once (inline, or KEPT in the ledger).
 - **hand-rolled stdlib**: loops/plumbing the toolchain already provides —
   the agent's brief carries the `use-modern-go` CLI `list` output for the
   repo's Go version (version-correct, 1.0→1.27) plus the /code Modern
@@ -126,11 +130,13 @@ Cut-list ranked by net lines saved. "All EARNED" backed by the scan is a valid
 outcome — never manufacture cuts to look productive, and never cut tests or
 load-bearing WHY comments to move the number.
 
-**Standing rejections.** Every round ends with an adjudicated-rejected list
-(candidate, reason) appended to one memory file per repo named
-`loc-justify-rejections`, and every round begins by reading it and quoting
-the rows it relied on in the report: a rejected candidate is not re-flagged
-unless the code or the callers changed. Typical entries: single-consumer helpers kept for
+**Standing rejections live in the hygiene ledger** (`/review-round` §0):
+every round ends by marking each file read as CLEAN or KEPT (with the kept
+items and their reasons in the note) at the file's current blob, and the
+next round reads only files whose blob changed. The per-repo
+`loc-justify-rejections` memory files are the pre-ledger record; quote them
+until their rows have been carried into the ledger, then stop updating them.
+A rejected candidate is not re-flagged unless the file or a caller changed. Typical entries: single-consumer helpers kept for
 sibling symmetry, guards at an exported-API boundary, deliberate scaffolding
 for a rollout phase.
 
