@@ -6,6 +6,8 @@ import (
 	"go/constant"
 	"go/token"
 	"go/types"
+	"strconv"
+	"strings"
 
 	"golang.org/x/tools/go/analysis"
 
@@ -31,6 +33,9 @@ func newAnalyzer() *analysis.Analyzer {
 
 func run(pass *analysis.Pass) (any, error) {
 	for f := range source.Files(pass) {
+		if cmpTaken(pass, f) {
+			continue
+		}
 		for n := range ast.Preorder(f) {
 			if block, ok := n.(*ast.BlockStmt); ok {
 				checkBlock(pass, block.List)
@@ -94,6 +99,27 @@ func checkBlock(pass *analysis.Pass, stmts []ast.Stmt) {
 			report(ifs.Pos(), ifs.End(), "zero-value fallback on "+name+" is "+name+" = "+call, src(x)+" = "+call)
 		}
 	}
+}
+
+// cmpTaken reports a file where the name cmp is another package (go-cmp) or a package-level identifier, so cmp.Or cannot be spelled.
+func cmpTaken(pass *analysis.Pass, f *ast.File) bool {
+	if pass.Pkg.Scope().Lookup("cmp") != nil {
+		return true
+	}
+	for _, imp := range f.Imports {
+		path, err := strconv.Unquote(imp.Path.Value)
+		if err != nil {
+			continue
+		}
+		name := path[strings.LastIndex(path, "/")+1:]
+		if imp.Name != nil {
+			name = imp.Name.Name
+		}
+		if name == "cmp" && path != "cmp" {
+			return true
+		}
+	}
+	return false
 }
 
 // fallbackCond recognizes x != zero, x == zero and x > 0 (unsigned, or signed with -signed) for a comparable x.
