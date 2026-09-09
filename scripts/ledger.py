@@ -30,8 +30,16 @@ def ledger_path(repo, explicit):
     return os.path.expanduser(f"~/Documents/workspace/cocoonstack/.hygiene/{name}.tsv")
 
 
+def source_glob(repo):
+    return "*.rs" if os.path.exists(os.path.join(repo, "Cargo.toml")) else "*.go"
+
+
+def is_test(path):
+    return path.endswith("_test.go") or "/tests/" in path
+
+
 def tracked(repo):
-    out = subprocess.run(["git", "-C", repo, "ls-files", "-s", "*.go"], capture_output=True, text=True, check=True).stdout
+    out = subprocess.run(["git", "-C", repo, "ls-files", "-s", source_glob(repo)], capture_output=True, text=True, check=True).stdout
     blobs = {}
     for line in out.splitlines():
         meta, path = line.split("\t", 1)
@@ -75,10 +83,10 @@ def cmd_diff(args):
     if rules != rules_commit():
         print(f"# rules changed ({rules or 'none'} -> {rules_commit()}): every file is due", file=sys.stderr)
         rows = {}
-    due = [p for p, b in blobs.items() if (p not in rows or rows[p][col] != b) and not (args.lens == "judge" and p.endswith("_test.go"))]
+    due = [p for p, b in blobs.items() if (p not in rows or rows[p][col] != b) and not (args.lens == "judge" and is_test(p))]
     for p in sorted(due):
         print(p)
-    scope = len(blobs) if args.lens == "style" else sum(not p.endswith("_test.go") for p in blobs)
+    scope = len(blobs) if args.lens == "style" else sum(not is_test(p) for p in blobs)
     print(f"# {len(due)} of {scope} files due for the {args.lens} lens", file=sys.stderr)
 
 
