@@ -30,16 +30,16 @@ def ledger_path(repo, explicit):
     return os.path.expanduser(f"~/Documents/workspace/cocoonstack/.hygiene/{name}.tsv")
 
 
-def source_glob(repo):
-    return "*.rs" if os.path.exists(os.path.join(repo, "Cargo.toml")) else "*.go"
+SOURCE_GLOBS = ("*.go", "*.rs", "*.py")
 
 
 def is_test(path):
-    return path.endswith("_test.go") or "/tests/" in path
+    name = os.path.basename(path)
+    return name.endswith("_test.go") or "/tests/" in path or name.startswith("test_") or name == "conftest.py"
 
 
 def tracked(repo):
-    out = subprocess.run(["git", "-C", repo, "ls-files", "-s", source_glob(repo)], capture_output=True, text=True, check=True).stdout
+    out = subprocess.run(["git", "-C", repo, "ls-files", "-s", *SOURCE_GLOBS], capture_output=True, text=True, check=True).stdout
     blobs = {}
     for line in out.splitlines():
         meta, path = line.split("\t", 1)
