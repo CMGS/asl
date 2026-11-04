@@ -30,6 +30,8 @@ import sys
 
 ASL = os.path.expanduser("~/Documents/workspace/asl")
 SOURCE_GLOBS = ("*.go", "*.rs", "*.py")
+INFRA_GLOBS = ("*.sh", "*Dockerfile", "Makefile", "*.yml", "*.yaml", "*.service", "*.toml", "*.rc", "*platforms")
+PROD_LENSES = {"judge", "loc", "perf"}
 
 
 def ledger_path(repo, explicit):
@@ -50,8 +52,20 @@ def is_test(path):
     return name.endswith("_test.go") or "/tests/" in path or name.startswith("test_") or name == "conftest.py"
 
 
+def is_infra(path):
+    return not path.endswith((".go", ".rs", ".py"))
+
+
+def in_scope(lens, path):
+    if lens == "infra" or is_infra(path):
+        return lens == "infra" and is_infra(path)
+    if lens == "ownership":
+        return path.endswith(".rs")
+    return not (lens in PROD_LENSES and is_test(path))
+
+
 def tracked(repo):
-    out = subprocess.run(["git", "-C", repo, "ls-files", "-s", *SOURCE_GLOBS],
+    out = subprocess.run(["git", "-C", repo, "ls-files", "-s", *SOURCE_GLOBS, *INFRA_GLOBS],
                          capture_output=True, text=True, check=True).stdout
     blobs = {}
     for line in out.splitlines():
@@ -163,11 +177,10 @@ def cmd_diff(args):
         print(f"# {len(due)} of {len(flows)} flows due for the {args.lens} lens", file=sys.stderr)
         return
     due = [p for p, b in blobs.items()
-           if rows.get(p, {}).get("lenses", {}).get(args.lens) != b
-           and not (args.lens == "judge" and is_test(p))]
+           if in_scope(args.lens, p) and rows.get(p, {}).get("lenses", {}).get(args.lens) != b]
     for p in sorted(due):
         print(p)
-    scope = len(blobs) if args.lens != "judge" else sum(not is_test(p) for p in blobs)
+    scope = sum(in_scope(args.lens, p) for p in blobs)
     print(f"# {len(due)} of {scope} files due for the {args.lens} lens", file=sys.stderr)
 
 
