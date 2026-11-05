@@ -29,8 +29,9 @@ import subprocess
 import sys
 
 ASL = os.path.expanduser("~/Documents/workspace/asl")
-SOURCE_GLOBS = ("*.go", "*.rs", "*.py")
-INFRA_GLOBS = ("*.sh", "*Dockerfile", "Makefile", "*.yml", "*.yaml", "*.service", "*.toml", "*.rc", "*platforms")
+SOURCE_EXTS = (".go", ".rs", ".py", ".ts", ".tsx", ".mts", ".mjs", ".js", ".java", ".kt", ".swift")
+SOURCE_GLOBS = tuple("*" + e for e in SOURCE_EXTS)
+INFRA_GLOBS = ("*.sh", "*Dockerfile", "Makefile", "*.yml", "*.yaml", "*.service", "*.toml", "*.rc", "*platforms", "*.ps1", "*.plist", "*pins")
 PROD_LENSES = {"judge", "loc", "perf"}
 
 
@@ -49,11 +50,12 @@ def flows_path(ledger):
 
 def is_test(path):
     name = os.path.basename(path)
-    return name.endswith("_test.go") or "/tests/" in path or name.startswith("test_") or name == "conftest.py"
+    return (name.endswith("_test.go") or "/tests/" in path or name.startswith("test_") or name == "conftest.py"
+            or ".test." in name or ".spec." in name)
 
 
 def is_infra(path):
-    return not path.endswith((".go", ".rs", ".py"))
+    return not path.endswith(SOURCE_EXTS)
 
 
 def in_scope(lens, path):
