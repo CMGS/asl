@@ -1,10 +1,10 @@
 {
   "name": "cocoon-code-standards",
-  "description": "Cocoonstack code standards: the /code style walkthrough and /loc-justify audit skills, plus a pre-commit hook that gates Go layout via asl and comment growth on fix commits.",
-  "version": "0.1.0",
+  "description": "Cocoonstack code standards: the /code (Go), /code-rs, /code-py and /code-ts style walkthroughs, the /review-round batch-end loop and the /loc-justify audit skills, plus a pre-commit hook that gates Go layout via asl and comment growth on fix commits.",
+  "version": "0.2.0",
   "author": {
     "name": "CMGS"
   },
-  "keywords": ["go", "golang", "style", "layout", "asl", "loc-justify"],
+  "keywords": ["go", "golang", "rust", "python", "typescript", "style", "layout", "asl", "review-round", "loc-justify"],
   "skills": "./skills/"
 }

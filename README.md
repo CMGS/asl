@@ -146,6 +146,12 @@ The plugin carries:
   budget, logging, modern-Go idioms, naming, error handling, build/CI config.
   asl enforces its mechanically checkable layout rules; the rest stays in the
   review walkthrough.
+- **code-rs**, **code-py**, **code-ts** skills — the same standard for Rust,
+  Python and TypeScript/React.
+- **review-round** skill — the batch-end quality loop: per-language style
+  walkthroughs, correctness review, flow readers, `/simplify` lenses, the
+  gate list, and a blob-keyed ledger (`scripts/ledger.py`) so unchanged files
+  keep their verdicts.
 - **loc-justify** skill — whole-repo production-LOC audit: measure and
   attribute code mass with exact commands, then force an item-by-item
   EARNED/CHALLENGED verdict with a ranked cut-list.
