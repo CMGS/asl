@@ -29,7 +29,7 @@ import subprocess
 import sys
 
 ASL = os.path.expanduser("~/Documents/workspace/asl")
-SOURCE_EXTS = (".go", ".rs", ".py", ".ts", ".tsx", ".mts", ".mjs", ".js", ".java", ".kt", ".swift")
+SOURCE_EXTS = (".go", ".rs", ".py", ".ts", ".tsx", ".mts", ".mjs", ".js", ".java", ".kt", ".swift", ".m")
 SOURCE_GLOBS = tuple("*" + e for e in SOURCE_EXTS)
 INFRA_GLOBS = ("*.sh", "*Dockerfile", "Makefile", "*.yml", "*.yaml", "*.service", "*.toml", "*.rc", "*platforms", "*.ps1", "*.plist", "*pins")
 PROD_LENSES = {"judge", "loc", "perf"}
